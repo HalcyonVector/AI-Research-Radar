@@ -1,0 +1,67 @@
+# syntax=docker/dockerfile:1
+# Multi-stage build for the AI Research Radar FastAPI backend.
+# BUILD CONTEXT MUST BE apps/api (see docker-compose.yml / render.yaml).
+#   docker build -f infra/docker/Dockerfile.api apps/api
+
+########## Stage 1: builder ##########
+FROM python:3.12-slim AS builder
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Build deps for packages that may need compilation (psycopg, numpy, torch, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /wheels
+COPY requirements.txt .
+# Pre-build wheels so the runtime stage stays slim and fast to install.
+RUN pip wheel --wheel-dir=/wheels -r requirements.txt
+
+########## Stage 2: runtime ##########
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Cache sentence-transformers / HF models in a writable, mountable location
+    HF_HOME=/app/.cache/huggingface \
+    SENTENCE_TRANSFORMERS_HOME=/app/.cache/huggingface
+
+# libpq for psycopg runtime; curl for container healthchecks.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install the pre-built wheels.
+COPY --from=builder /wheels /wheels
+COPY requirements.txt .
+RUN pip install --no-index --find-links=/wheels -r requirements.txt \
+    && rm -rf /wheels
+
+# Application code (build context = apps/api).
+COPY src/ ./src/
+COPY migrations/ ./migrations/
+COPY alembic.ini ./alembic.ini
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh \
+    && mkdir -p /app/.cache/huggingface
+
+# Non-root user.
+RUN useradd --create-home --uid 10001 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS http://localhost:8000/health || exit 1
+
+# entrypoint.sh runs migrations + seed, then execs the given command.
+ENTRYPOINT ["./entrypoint.sh"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

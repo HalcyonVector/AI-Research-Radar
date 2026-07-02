@@ -1,0 +1,91 @@
+# =============================================================================
+# Render Blueprint for AI Research Radar (FREE-tier friendly).
+# Deploy: push this repo, then in Render -> "New +" -> "Blueprint" -> pick repo.
+#
+# COST MODEL / FREE-TIER STRATEGY
+# -------------------------------
+# * Render FREE "web" services exist (they sleep after ~15 min idle, cold start
+#   on next request). We use ONE free web service for the API.
+# * Render "worker" (background) services are PAID only. So on the free tier we
+#   do NOT run a separate Celery worker/beat here. Instead:
+#     - Set CELERY_EAGER=true so tasks run in-process inside the web service, OR
+#     - Trigger ingestion via POST /api/v1/internal/ingest/trigger from a
+#       GitHub Actions cron (see docs/DEPLOY.md). This is the recommended
+#       "scheduler" on free tier.
+# * Postgres + Redis: Render's managed addons are paid. Use EXTERNAL FREE tiers
+#   instead and wire them via env vars:
+#     - Postgres + pgvector  ->  Supabase free  (run: create extension vector;)
+#     - Redis                ->  Upstash free   (rediss:// URL)
+# * AI: Ollama needs GPU/RAM and CANNOT run on Render free. Use Google Gemini
+#   free tier (AI_MODE=cloud, GEMINI_API_KEY from aistudio.google.com).
+#
+# The commented `worker` block below is the PAID upgrade path if you later want
+# always-on workers + beat. Uncomment and switch plans to enable it.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # API (FastAPI) — FREE web service, Docker build from apps/api.
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: ai-research-radar-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerContext: apps/api
+    dockerfilePath: infra/docker/Dockerfile.api
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      # Free tier: run Celery tasks synchronously in-process (no separate worker).
+      - key: CELERY_EAGER
+        value: "true"
+      - key: CACHE_ENABLED
+        value: "true"
+      # ---- AI: cloud mode (Gemini free tier) ----
+      - key: AI_MODE
+        value: cloud
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: EMBEDDING_PROVIDER
+        value: local          # sentence-transformers, 384d (no external cost)
+      - key: EMBEDDING_DIM
+        value: "384"
+      # ---- Secrets: set these in the Render dashboard (sync:false) ----
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false           # paste from https://aistudio.google.com/apikey
+      # ---- External free datastores (Supabase Postgres + Upstash Redis) ----
+      - key: DATABASE_URL
+        sync: false           # postgresql+psycopg://...@db.<ref>.supabase.co:5432/postgres
+      - key: REDIS_URL
+        sync: false           # rediss://default:<token>@<host>.upstash.io:6379
+      # ---- Optional free tokens ----
+      - key: HF_API_TOKEN
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # PAID upgrade path — always-on Celery worker + beat. Left commented so the
+  # blueprint stays 100% free by default. Uncomment to enable (requires paid plan).
+  # ---------------------------------------------------------------------------
+  # - type: worker
+  #   name: ai-research-radar-worker
+  #   runtime: docker
+  #   plan: starter            # background workers are NOT available on free
+  #   region: oregon
+  #   dockerContext: apps/api
+  #   dockerfilePath: infra/docker/Dockerfile.worker
+  #   autoDeploy: true
+  #   envVars:
+  #     - fromGroup: radar-shared   # define a shared env group in the dashboard
+  #     - key: CELERY_EAGER
+  #       value: "false"
+  #   # dockerCommand: celery -A src.celery_app worker -l info & celery -A src.celery_app beat -l info
+
+# NOTE: databases: (Render managed Postgres/Redis) intentionally omitted —
+# those are paid. See docs/DEPLOY.md for the Supabase + Upstash free setup.

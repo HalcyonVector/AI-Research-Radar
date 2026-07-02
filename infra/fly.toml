@@ -1,0 +1,49 @@
+# Minimal Fly.io config for the AI Research Radar API (optional alternative to
+# Render). Deploy from repo root:
+#   fly launch --no-deploy   # creates the app, then:
+#   fly deploy
+#
+# Fly free allowances are limited; bring your own external Postgres (Supabase)
+# and Redis (Upstash), or `fly postgres create` / `fly redis create`.
+# Set secrets with:  fly secrets set GEMINI_API_KEY=... DATABASE_URL=... REDIS_URL=... SECRET_KEY=...
+
+app = "ai-research-radar-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "infra/docker/Dockerfile.api"
+  # Docker build context. Fly builds from repo root; the Dockerfile COPYs assume
+  # context = apps/api, so point the context there.
+  # NOTE: set the build context in `fly deploy` if needed:
+  #   fly deploy --dockerfile infra/docker/Dockerfile.api ./apps/api
+
+[env]
+  ENVIRONMENT = "production"
+  AI_MODE = "cloud"
+  GEMINI_MODEL = "gemini-2.0-flash"
+  EMBEDDING_PROVIDER = "local"
+  EMBEDDING_DIM = "384"
+  CELERY_EAGER = "true"
+  CACHE_ENABLED = "true"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"     # scale to zero when idle (free-friendly)
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.http_options]
+    [http_service.http_options.response]
+      pristine = false
+
+[[http_service.checks]]
+  method = "GET"
+  path = "/health"
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "40s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

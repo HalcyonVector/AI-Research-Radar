@@ -1,0 +1,47 @@
+name: Deploy
+
+# -----------------------------------------------------------------------------
+# Deployment for AI Research Radar is handled by each platform's native Git
+# integration — this workflow is documentation + an optional manual hook.
+#
+#   Frontend (Vercel):  connect the repo in Vercel, Root Directory = apps/web.
+#                       Vercel auto-deploys every push to `main` (Production)
+#                       and every PR (Preview). No token needed here.
+#
+#   Backend (Render):   render.yaml Blueprint with `autoDeploy: true` redeploys
+#                       the API web service on every push to `main`.
+#
+# Because both platforms auto-deploy on push, this workflow only runs on manual
+# dispatch and simply reports where things go. To force a Render deploy from CI,
+# add a Render "Deploy Hook" URL as the RENDER_DEPLOY_HOOK secret and uncomment
+# the curl step below.
+# -----------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  announce:
+    name: Deployment info
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report deploy targets
+        run: |
+          echo "Frontend -> Vercel (auto-deploy on push to main; Root Directory = apps/web)"
+          echo "Backend  -> Render Blueprint render.yaml (autoDeploy: true)"
+          echo "Data     -> Supabase (Postgres+pgvector) + Upstash (Redis), external free tiers"
+          echo "See docs/DEPLOY.md for the full free-hosting guide."
+
+      # ---- Optional: trigger a Render deploy explicitly via Deploy Hook ----
+      # - name: Trigger Render deploy
+      #   if: github.ref == 'refs/heads/main'
+      #   env:
+      #     RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      #   run: |
+      #     if [ -n "$RENDER_DEPLOY_HOOK" ]; then
+      #       curl -fsSL -X POST "$RENDER_DEPLOY_HOOK"
+      #     else
+      #       echo "RENDER_DEPLOY_HOOK not set; relying on Render autoDeploy."
+      #     fi

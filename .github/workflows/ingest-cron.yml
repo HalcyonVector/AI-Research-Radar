@@ -1,0 +1,39 @@
+name: Ingest Cron (free scheduler)
+
+# -----------------------------------------------------------------------------
+# On the Render FREE tier there is no always-on Celery beat. This scheduled
+# GitHub Action acts as the "scheduler": it pings the API's internal ingest
+# trigger on a schedule so new papers/repos get pulled in.
+#
+# Setup:
+#   1. In the repo Settings -> Secrets and variables -> Actions, add:
+#        API_BASE_URL   e.g. https://ai-research-radar-api.onrender.com
+#        API_SECRET_KEY the same value as the backend SECRET_KEY / API auth key
+#   2. Adjust the cron below (times are UTC).
+# -----------------------------------------------------------------------------
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours (UTC)
+  workflow_dispatch:         # allow manual runs
+
+jobs:
+  trigger-ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger ingestion
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          # Wake the (possibly sleeping) free Render service first.
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 15 \
+            "${API_BASE_URL}/health" || echo "health warmup failed (continuing)"
+
+          echo "Triggering ingestion..."
+          curl -fsS -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: ${API_SECRET_KEY}" \
+            "${API_BASE_URL}/api/v1/internal/ingest/trigger" \
+            && echo "" && echo "ingest triggered"

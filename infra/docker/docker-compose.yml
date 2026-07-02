@@ -1,0 +1,186 @@
+# AI Research Radar - local full stack. Run from repo root:
+#   docker compose -f infra/docker/docker-compose.yml --env-file apps/api/.env up --build
+# (or copy apps/api/.env.example -> apps/api/.env first)
+#
+# Paths below are relative to THIS file (infra/docker/), so the repo root is ../../.
+# Build context for the backend images is ../../apps/api (per Dockerfile expectations).
+
+name: ai-research-radar
+
+x-api-env: &api-env
+  # A single shared env file drives every backend container.
+  env_file:
+    - ../../apps/api/.env
+  environment:
+    # Override host-oriented defaults from .env with in-network service names.
+    DATABASE_URL: postgresql+psycopg://radar:radar@postgres:5432/radar_dev
+    REDIS_URL: redis://redis:6379/0
+    OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+
+x-api-build: &api-build
+  context: ../../apps/api
+  dockerfile: ../../infra/docker/Dockerfile.api
+
+x-worker-build: &worker-build
+  context: ../../apps/api
+  dockerfile: ../../infra/docker/Dockerfile.worker
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: radar
+      POSTGRES_PASSWORD: radar
+      POSTGRES_DB: radar_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radar -d radar_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ---- API: runs migrations + seed (via entrypoint.sh) then uvicorn ----
+  api:
+    build: *api-build
+    <<: *api-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the repo so the canonical seeder is reachable at /repo.
+      - ../../:/repo:ro
+      # Persist downloaded sentence-transformers models across restarts.
+      - hf_cache:/app/.cache/huggingface
+    # entrypoint.sh waits for DB, runs `alembic upgrade head`, seeds, then execs:
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # reach a host-run Ollama
+    restart: unless-stopped
+
+  # ---- Workers: one per logical queue group. Migrations disabled (api owns them). ----
+  worker-ingestion:
+    build: *worker-build
+    <<: *api-env
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://radar:radar@postgres:5432/radar_dev
+      REDIS_URL: redis://redis:6379/0
+    command: ["celery", "-A", "src.celery_app", "worker", "-l", "info",
+              "-Q", "ingestion.high,ingestion.normal,graph", "-n", "ingestion@%h"]
+    volumes:
+      - hf_cache:/app/.cache/huggingface
+    restart: unless-stopped
+
+  worker-ai:
+    build: *worker-build
+    <<: *api-env
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://radar:radar@postgres:5432/radar_dev
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    command: ["celery", "-A", "src.celery_app", "worker", "-l", "info",
+              "-Q", "ai.summaries,ai.embeddings", "-n", "ai@%h", "--concurrency", "2"]
+    volumes:
+      - hf_cache:/app/.cache/huggingface
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  worker-scoring:
+    build: *worker-build
+    <<: *api-env
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://radar:radar@postgres:5432/radar_dev
+      REDIS_URL: redis://redis:6379/0
+    command: ["celery", "-A", "src.celery_app", "worker", "-l", "info",
+              "-Q", "scoring", "-n", "scoring@%h"]
+    volumes:
+      - hf_cache:/app/.cache/huggingface
+    restart: unless-stopped
+
+  worker-intelligence:
+    build: *worker-build
+    <<: *api-env
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://radar:radar@postgres:5432/radar_dev
+      REDIS_URL: redis://redis:6379/0
+    command: ["celery", "-A", "src.celery_app", "worker", "-l", "info",
+              "-Q", "intelligence", "-n", "intelligence@%h"]
+    volumes:
+      - hf_cache:/app/.cache/huggingface
+    restart: unless-stopped
+
+  # ---- Beat scheduler: enqueues periodic ingestion/scoring tasks ----
+  scheduler:
+    build: *worker-build
+    <<: *api-env
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://radar:radar@postgres:5432/radar_dev
+      REDIS_URL: redis://redis:6379/0
+    command: ["celery", "-A", "src.celery_app", "beat", "-l", "info"]
+    restart: unless-stopped
+
+  # ---- Flower: Celery monitoring UI at http://localhost:5555 ----
+  flower:
+    image: mher/flower:2.0
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      FLOWER_PORT: "5555"
+    command: ["celery", "--broker=redis://redis:6379/0", "flower", "--port=5555"]
+    ports:
+      - "5555:5555"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  hf_cache:
