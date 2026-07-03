@@ -325,8 +325,8 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 ---
 
 ## 👨‍💻 Author
-**Naveen**
-GitHub: [@your-username](https://github.com/your-username)
+**Vector**
+GitHub: [@halcyon-vector](https://github.com/halcyon-vector)
 
 ---
 
