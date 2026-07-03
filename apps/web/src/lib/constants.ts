@@ -49,11 +49,12 @@ export function getCategory(slug: string | undefined | null): CategoryDef {
   return { slug: slug || "unknown", name: slug || "Unknown", color: "#6b7280", icon: Layers };
 }
 
+// Mono ramp — lightness encodes score (brutalist B/W system).
 export function scoreColor(score: number): string {
-  if (score >= 80) return "#22c55e";
-  if (score >= 60) return "#3b82f6";
-  if (score >= 40) return "#f59e0b";
-  return "#ef4444";
+  if (score >= 80) return "#ffffff";
+  if (score >= 60) return "#cfcfcf";
+  if (score >= 40) return "#8a8a8a";
+  return "#565656";
 }
 
 export const SORT_OPTIONS = [

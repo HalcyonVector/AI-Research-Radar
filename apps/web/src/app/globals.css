@@ -2,22 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   BRUTALIST MONO SYSTEM
+   Pure black & white. Heavy grotesk type. Hairline rules.
+   Zero gradients, glow, blur. Variable NAMES are unchanged so
+   every existing component inherits the mono palette.
+   ============================================================ */
 :root {
-  --bg-base: #0a0a0f;
-  --bg-surface: #111118;
-  --bg-elevated: #1a1a26;
-  --bg-subtle: #1f1f2e;
+  --bg-base: #000000;
+  --bg-surface: #0a0a0a;
+  --bg-elevated: #111111;
+  --bg-subtle: #161616;
 
-  --border-base: #252535;
-  --border-strong: #363650;
+  /* glass names kept, but flattened to solid surfaces */
+  --glass-surface: #0a0a0a;
+  --glass-border: #242424;
+  --glass-highlight: transparent;
 
-  --text-primary: #f0f0ff;
-  --text-secondary: #9090b0;
-  --text-tertiary: #5a5a78;
+  --border-base: #242424;
+  --border-strong: #3a3a3a;
 
-  --accent-primary: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-subtle: #1e1e3f;
+  --text-primary: #ffffff;
+  --text-secondary: #8a8a8a;
+  --text-tertiary: #565656;
+
+  /* accents collapse to white in mono */
+  --accent-primary: #ffffff;
+  --accent-hover: #ffffff;
+  --accent-subtle: #161616;
+  --accent-2: #ffffff;
+  --accent-3: #ffffff;
+  --accent-4: #ffffff;
+
+  --rule: #242424;
+  --rule-strong: #3a3a3a;
 }
 
 * {
@@ -31,7 +49,6 @@ html {
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -40,7 +57,55 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Custom scrollbar */
+/* Background = flat black. No aurora, no color. (Class name kept
+   so AppShell still compiles even if it references it.) */
+.app-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--bg-base);
+}
+
+/* glass → stark solid block */
+.glass {
+  background: var(--bg-surface);
+  border: 1px solid var(--rule);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+/* hairline → plain border, no gradient overlay */
+.hairline {
+  position: relative;
+}
+.hairline::before {
+  content: none;
+}
+
+/* gradient text → solid white */
+.text-gradient {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--text-primary);
+}
+
+/* glow utilities → no-ops */
+.glow-primary,
+.glow-ring {
+  box-shadow: none;
+}
+
+/* Uppercase micro-label (used across the mono UI) */
+.eyebrow-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Scrollbar — monochrome */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -49,15 +114,15 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 6px;
-  border: 2px solid var(--bg-base);
+  background: var(--rule-strong);
+  border-radius: 0;
+  border: 3px solid var(--bg-base);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
 }
 
-/* Skeleton shimmer */
+/* Skeleton — grayscale sweep */
 .skeleton {
   position: relative;
   overflow: hidden;
@@ -68,12 +133,7 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.04),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
   animation: shimmer 1.5s infinite;
 }
 @keyframes shimmer {
@@ -82,19 +142,10 @@ body {
   }
 }
 
-/* Focus ring */
+/* Focus ring — white, square */
 :focus-visible {
-  outline: 2px solid var(--accent-primary);
+  outline: 2px solid var(--text-primary);
   outline-offset: 2px;
-}
-
-.grid-bg {
-  background-image:
-    linear-gradient(var(--border-base) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-base) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-position: -1px -1px;
-  opacity: 0.35;
 }
 
 .animate-fade-in {
@@ -109,4 +160,8 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in { animation: none; }
 }

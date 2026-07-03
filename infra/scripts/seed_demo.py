@@ -42,6 +42,10 @@ def main(n_papers=60):
         cats = db.execute(select(ResearchCategory)).scalars().all()
         if not cats:
             print("Run seed_categories.py first."); return
+        if db.query(Paper).count() > 0:
+            print("Demo data already present — skipping. To reseed from scratch, "
+                  "run `docker compose down -v` then `up -d --build` and seed again.")
+            return
         orgs = []
         for name in ORGS:
             o = db.execute(select(Organization).where(Organization.name_normalized == normalize_name(name))).scalar_one_or_none()
@@ -54,9 +58,12 @@ def main(n_papers=60):
         authors = []
         for i in range(40):
             nm = f"Researcher {i+1}"
-            a = Author(name=nm, name_normalized=normalize_name(nm), primary_org_id=random.choice(orgs).id,
-                       paper_count=random.randint(1, 20))
-            db.add(a); db.flush(); authors.append(a)
+            a = db.execute(select(Author).where(Author.name_normalized == normalize_name(nm))).scalar_one_or_none()
+            if not a:
+                a = Author(name=nm, name_normalized=normalize_name(nm), primary_org_id=random.choice(orgs).id,
+                           paper_count=random.randint(1, 20))
+                db.add(a); db.flush()
+            authors.append(a)
 
         papers = []
         for i in range(n_papers):

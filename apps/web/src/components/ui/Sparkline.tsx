@@ -16,10 +16,13 @@ export function Sparkline({
   data,
   width = 100,
   height = 28,
-  color = "var(--accent-primary)",
+  color,
   fill = true,
   strokeWidth = 1.5,
 }: SparklineProps) {
+  // Mono system: sparklines are always white on faint fill (color prop ignored).
+  void color;
+  const stroke = "var(--text-primary)";
   if (!data || data.length === 0) {
     return <div style={{ width, height }} className="opacity-40" />;
   }
@@ -42,12 +45,12 @@ export function Sparkline({
     <svg width={width} height={height} className="overflow-visible">
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.14" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
       </defs>
       {fill && <path d={areaPath} fill={`url(#${gradId})`} />}
-      <path d={linePath} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={linePath} fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Badge } from "@/components/ui/Badge";
+import { BookmarkButton } from "@/components/ui/BookmarkButton";
+import { AuthorLinks } from "@/components/papers/AuthorLinks";
 import { authorList, formatCompact, formatDate, truncate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -79,12 +81,15 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
               </Badge>
             )}
           </div>
-          <ScoreRing
-            score={paper.scores?.composite ?? 0}
-            size={featured ? 54 : 46}
-            stroke={5}
-            animate={false}
-          />
+          <div className="flex items-start gap-2">
+            <BookmarkButton entityId={paper.id} entityType="paper" variant="compact" stopPropagation />
+            <ScoreRing
+              score={paper.scores?.composite ?? 0}
+              size={featured ? 54 : 46}
+              stroke={5}
+              animate={false}
+            />
+          </div>
         </div>
 
         <h3
@@ -104,7 +109,7 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
           <FileText size={12} />
           <span className="font-mono">{paper.arxiv_id}</span>
           <span>·</span>
-          <span className="truncate">{authorList(paper.authors, 2)}</span>
+          <AuthorLinks authors={paper.authors} max={2} className="truncate" stopPropagation />
         </div>
 
         <div className="mt-3 flex items-center justify-between border-t border-[var(--border-base)] pt-3">

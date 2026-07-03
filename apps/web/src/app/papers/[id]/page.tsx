@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePaper } from "@/hooks/usePapers";
 import { TwoColumnLayout } from "@/components/layout/BentoGrid";
 import { PaperDetail } from "@/components/papers/PaperDetail";
+import { PaperChat } from "@/components/papers/PaperChat";
 import { AISummaryPanel } from "@/components/papers/AISummaryPanel";
 import { PaperMetrics } from "@/components/papers/PaperMetrics";
 import { RelatedPapers } from "@/components/papers/RelatedPapers";
@@ -45,6 +46,7 @@ export default function PaperDetailPage() {
             main={
               <>
                 <AISummaryPanel summary={paper.ai_summary} />
+                <PaperChat paperId={id} />
                 <ResearchDNAChart paperId={id} />
                 <RelatedPapers paperId={id} />
               </>

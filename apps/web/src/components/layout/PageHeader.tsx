@@ -14,11 +14,11 @@ export function PageHeader({ title, description, eyebrow, actions, children }: P
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           {eyebrow && (
-            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-[var(--accent-hover)]">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--text-secondary)]">
               {eyebrow}
             </p>
           )}
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+          <h1 className="text-4xl font-bold uppercase leading-[0.98] tracking-tight text-[var(--text-primary)]">
             {title}
           </h1>
           {description && (
@@ -42,10 +42,12 @@ export function SectionHeader({
   icon?: ReactNode;
 }) {
   return (
-    <div className="mb-3 flex items-center justify-between">
+    <div className="mb-3 flex items-center justify-between border-b-2 border-[var(--text-primary)] pb-2">
       <div className="flex items-center gap-2">
         {icon}
-        <h2 className="text-sm font-semibold tracking-tight text-[var(--text-primary)]">{title}</h2>
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text-primary)]">
+          {title}
+        </h2>
       </div>
       {action}
     </div>

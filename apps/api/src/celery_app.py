@@ -44,6 +44,8 @@ celery_app.conf.beat_schedule = {
     "arxiv-fetch-2h": {"task": "workers.ingestion.arxiv.run", "schedule": crontab(minute=0, hour="*/2")},
     "hf-fetch-6h": {"task": "workers.ingestion.huggingface.run", "schedule": crontab(minute=15, hour="*/6")},
     "github-fetch-12h": {"task": "workers.ingestion.github.run", "schedule": crontab(minute=30, hour="*/12")},
+    "semantic-scholar-12h": {"task": "workers.ingestion.semantic_scholar.run", "schedule": crontab(minute=45, hour="*/12")},
+    "social-6h": {"task": "workers.ingestion.social.run", "schedule": crontab(minute=20, hour="*/6")},
     "refresh-views-1h": {"task": "workers.maintenance.refresh_views.run", "schedule": crontab(minute=5)},
     "score-papers-nightly": {"task": "workers.scoring.paper_scores.run_all", "schedule": crontab(minute=0, hour=4)},
     "trend-scores-daily": {"task": "workers.scoring.trend_scores.run", "schedule": crontab(minute=30, hour=4)},

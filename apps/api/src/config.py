@@ -19,13 +19,18 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
 
-    # Google Gemini (free cloud tier)
+    # Google Gemini (free cloud tier). Note: gemini-2.0-flash is deprecated; default to 2.5-flash.
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
-    # Optional paid providers (unused in free mode)
-    anthropic_api_key: str = ""
+    # OpenAI-compatible provider (AI_MODE=openai): Groq, Cerebras, OpenRouter, Mistral, Together, ...
+    # Groq default below; get a free key at https://console.groq.com
+    openai_base_url: str = "https://api.groq.com/openai/v1"
     openai_api_key: str = ""
+    openai_model: str = "llama-3.3-70b-versatile"
+
+    # Optional paid provider (unused in free mode)
+    anthropic_api_key: str = ""
 
     # Embeddings: "local" (sentence-transformers, 384d) or "gemini" (768d) or "openai" (1536d)
     embedding_provider: str = "local"

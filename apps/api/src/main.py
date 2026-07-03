@@ -9,6 +9,7 @@ from src.middleware.rate_limit import rate_limit_middleware
 from src.redis_client import is_up as redis_up
 from src.routers import (
     papers, trends, models, search, dashboard, graph, briefings, intelligence, internal,
+    authors, organizations, bookmarks, watches,
 )
 
 
@@ -37,6 +38,10 @@ def create_app() -> FastAPI:
     app.include_router(briefings.router, prefix=api)
     app.include_router(intelligence.router, prefix=api)
     app.include_router(internal.router, prefix=api)
+    app.include_router(authors.router, prefix=api)
+    app.include_router(organizations.router, prefix=api)
+    app.include_router(bookmarks.router, prefix=api)
+    app.include_router(watches.router, prefix=api)
 
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception):  # noqa: ARG001

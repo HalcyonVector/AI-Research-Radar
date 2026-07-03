@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { getCategory } from "@/lib/constants";
-import { Badge } from "./Badge";
+import { cn } from "@/lib/utils";
 
 interface CategoryBadgeProps {
   slug: string;
@@ -13,22 +13,25 @@ interface CategoryBadgeProps {
   className?: string;
 }
 
-export function CategoryBadge({ slug, name, color, withIcon = true, href, className }: CategoryBadgeProps) {
+export function CategoryBadge({ slug, name, href, className }: CategoryBadgeProps) {
   const cat = getCategory(slug);
-  const Icon = cat.icon;
   const label = name || cat.name;
-  const c = color || cat.color;
 
   const content = (
-    <Badge color={c} className={className}>
-      {withIcon && <Icon size={11} />}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 border border-[var(--rule-strong)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--text-secondary)]",
+        className
+      )}
+    >
+      <span className="h-1.5 w-1.5 shrink-0" style={{ backgroundColor: cat.color }} />
       {label}
-    </Badge>
+    </span>
   );
 
   if (href) {
     return (
-      <Link href={href} className="inline-flex hover:opacity-80 transition-opacity">
+      <Link href={href} className="inline-flex transition-colors hover:text-[var(--text-primary)]">
         {content}
       </Link>
     );

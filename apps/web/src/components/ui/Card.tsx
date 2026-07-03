@@ -14,9 +14,8 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
     <div
       ref={ref}
       className={cn(
-        "rounded-xl border border-[var(--border-base)] bg-[var(--bg-surface)] p-5 transition-all duration-150",
-        hover &&
-          "hover:border-[var(--border-strong)] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20",
+        "relative border border-[var(--rule)] bg-[var(--bg-surface)] p-5 transition-colors duration-150",
+        hover && "hover:border-[var(--text-primary)]",
         className
       )}
       {...props}
@@ -33,7 +32,10 @@ export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElemen
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-sm font-semibold tracking-tight text-[var(--text-primary)]", className)}
+      className={cn(
+        "text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--text-secondary)]",
+        className
+      )}
       {...props}
     />
   );

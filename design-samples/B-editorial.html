@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sample B — Editorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#141210;--fg:#ece7dd;--dim:#a9a091;--dim2:#736a5c;--rule:#2e2a24;--rule2:#413b32;--ink:#c8553d;--ink2:#e07a5f}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.6}
+  .serif{font-family:'Fraunces',Georgia,serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 32px}
+  header{border-bottom:2px solid var(--fg);position:sticky;top:0;background:var(--bg);z-index:5}
+  .masthead{display:flex;align-items:baseline;justify-content:space-between;padding:18px 0 12px}
+  .title{font-family:'Fraunces',serif;font-weight:900;font-size:26px;letter-spacing:-.01em}
+  .title span{color:var(--ink2)}
+  .issue{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+  nav{display:flex;gap:24px;border-top:1px solid var(--rule2);padding:9px 0;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  nav a{color:var(--dim);text-decoration:none}
+  nav a.on{color:var(--fg);font-weight:600}
+  nav a:hover{color:var(--ink2)}
+  nav .k{margin-left:auto;color:var(--dim2)}
+  .kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink2);margin:34px 0 8px}
+  h1{font-family:'Fraunces',serif;font-weight:900;font-size:52px;line-height:1.02;letter-spacing:-.02em;max-width:15ch}
+  .standfirst{font-family:'Fraunces',serif;font-weight:400;font-size:20px;line-height:1.5;color:var(--dim);max-width:56ch;margin-top:14px}
+  .lede{display:grid;grid-template-columns:1.5fr 1fr;gap:44px;margin-top:30px;padding-top:26px;border-top:1px solid var(--rule2)}
+  .lede p{margin-bottom:14px}
+  .drop::first-letter{font-family:'Fraunces',serif;font-weight:900;font-size:64px;float:left;line-height:.8;padding:6px 10px 0 0;color:var(--ink2)}
+  a.inl{color:var(--ink2);text-decoration:none;border-bottom:1px solid var(--rule2)}
+  aside h3{font-family:'Fraunces',serif;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--rule2);padding-bottom:8px;margin-bottom:6px}
+  .item{padding:11px 0;border-bottom:1px solid var(--rule)}
+  .item .n{font-family:'Fraunces',serif;color:var(--dim2);font-size:13px;margin-right:8px}
+  .item .t{font-family:'Fraunces',serif;font-size:16px;font-weight:500}
+  .item .m{font-size:12px;color:var(--dim);margin-top:3px}
+  .item .m b{color:var(--ink2);font-weight:600}
+  .rulehead{font-family:'Fraunces',serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:40px 0 4px;border-bottom:2px solid var(--fg);padding-bottom:8px}
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:18px;padding-bottom:48px}
+  .three .s{font-family:'Fraunces',serif;font-size:34px;font-weight:900;color:var(--ink2)}
+  .three .d{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim2);margin:2px 0 6px}
+  .three .t{font-family:'Fraunces',serif;font-size:17px;font-weight:500}
+  .three .r{font-size:13px;color:var(--dim);margin-top:6px;line-height:1.55}
+  .note{font-size:13px;color:var(--dim);border-left:2px solid var(--ink2);padding:4px 0 4px 14px;margin:20px 0}
+  .stats{display:flex;gap:36px;margin:22px 0 0;border-top:1px solid var(--rule2);padding-top:14px}
+  .stats .n{font-family:'Fraunces',serif;font-size:30px;font-weight:900}
+  .stats .l{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2)}
+</style></head>
+<body>
+<header><div class="wrap">
+  <div class="masthead">
+    <div class="title">The AI Research <span>Radar</span></div>
+    <div class="issue">Vol. II · Week of Jun 16, 2026</div>
+  </div>
+  <nav><a class="on">Dashboard</a><a>Papers</a><a>Trends</a><a>Models</a><a>Graph</a><a>Intelligence</a><a>Briefings</a><span class="k">Search ⌘K</span></nav>
+</div></header>
+
+<div class="wrap">
+  <div class="note">Sample B — “Editorial / print”: warm near-black, serif display type, one oxblood ink accent, rules instead of boxes, top masthead (no left pane), no icons/emojis.</div>
+
+  <div class="kicker">The Big Story</div>
+  <h1 class="serif">Mixture-of-experts routing breaks out of the lab.</h1>
+  <p class="standfirst">A wave of open implementations pushed sparse routing from research curiosity to production default this week — while three unfamous papers quietly began to matter.</p>
+
+  <div class="lede">
+    <div>
+      <p class="drop">Sparse expert routing dominated new GitHub implementations this week, with <a class="inl">Scaling Language Models with MoE Routing</a> leading on both citation velocity and momentum. The technique’s path from a single 2017 paper to commercial inference APIs now spans five organizations.</p>
+      <p>Elsewhere, agentic workflows continued to displace pure chain-of-thought reasoning. <a class="inl">Self-Improving Agents via Verified Tool Use</a> gained eight implementations in seven days, and tool-use benchmarks increasingly favor multi-step agents on real-world tasks.</p>
+      <div class="stats">
+        <div><div class="n">847</div><div class="l">Papers</div></div>
+        <div><div class="n">134</div><div class="l">Models</div></div>
+        <div><div class="n">29</div><div class="l">Benchmarks</div></div>
+        <div><div class="n">3</div><div class="l">Breakthroughs</div></div>
+      </div>
+    </div>
+    <aside>
+      <h3>Trending Now</h3>
+      <div class="item"><div><span class="n">01</span><span class="t">MoE Routing at Scale</span></div><div class="m">LLMs · <b>87.4</b> impact · +12</div></div>
+      <div class="item"><div><span class="n">02</span><span class="t">Verified Tool-Use Agents</span></div><div class="m">Agents · <b>72.1</b> impact · +8</div></div>
+      <div class="item"><div><span class="n">03</span><span class="t">Real-Time Audio Diffusion</span></div><div class="m">Speech · <b>61.0</b> impact · +18</div></div>
+      <div class="item"><div><span class="n">04</span><span class="t">Compositional World Models</span></div><div class="m">Robotics · <b>58.3</b> impact · +6</div></div>
+    </aside>
+  </div>
+
+  <div class="rulehead">Sleeping Giants — Not Famous Yet</div>
+  <div class="three">
+    <div><div class="s">88.4</div><div class="d">Implementations ▲340%</div><div class="t serif">Low-Rank Adaptation for Streaming Inference</div><div class="r">Twelve citations, but three independent labs shipped inference-optimized forks within three weeks.</div></div>
+    <div><div class="s">81.2</div><div class="d">Discussion ▲210%</div><div class="t serif">Compositional World Models for Robotics</div><div class="r">Surging forum discussion and rising related work despite a modest citation count.</div></div>
+    <div><div class="s">76.9</div><div class="d">HF Models ▲180%</div><div class="t serif">Synthetic Curricula for Reasoning</div><div class="r">A wave of derivative fine-tunes appeared on Hugging Face this month.</div></div>
+  </div>
+</div>
+</body></html>

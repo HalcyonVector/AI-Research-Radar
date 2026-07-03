@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import select, func, text, desc
 from sqlalchemy.orm import Session, selectinload
 
-from src.models import Paper, PaperCategory, ResearchCategory
+from src.models import Paper, PaperCategory, ResearchCategory, PaperConceptComposition
 from src.services import serializers as S
 from src.utils.pagination import encode_cursor, decode_cursor
 
@@ -75,6 +75,27 @@ def related_papers(db: Session, paper_id: str, limit=8) -> list[dict]:
         ).scalars().all()
         return [S.paper_list_item(x) for x in rows]
     return []
+
+
+def compare(db: Session, ids: list[str]) -> dict:
+    """Side-by-side comparison of papers + their research-DNA composition (feature: compare)."""
+    papers = []
+    dna: dict[str, list[dict]] = {}
+    for pid in ids:
+        p = db.get(Paper, pid)
+        if not p:
+            continue
+        papers.append(S.paper_detail(p))
+        comps = db.execute(
+            select(PaperConceptComposition)
+            .where(PaperConceptComposition.paper_id == p.id)
+            .order_by(desc(PaperConceptComposition.weight))
+        ).scalars().all()
+        dna[str(p.id)] = [
+            {"concept": c.concept, "weight": c.weight, "rationale": c.rationale}
+            for c in comps
+        ]
+    return {"papers": papers, "dna": dna}
 
 
 def metrics_history(db: Session, paper_id: str) -> list[dict]:

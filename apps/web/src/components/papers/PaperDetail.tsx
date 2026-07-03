@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { ScoreRing } from "@/components/ui/ScoreRing";
-import { authorList, formatDate } from "@/lib/formatters";
+import { BookmarkButton } from "@/components/ui/BookmarkButton";
+import { AuthorLinks } from "@/components/papers/AuthorLinks";
+import { formatDate } from "@/lib/formatters";
 
 interface PaperDetailProps {
   paper: PaperDetailType;
@@ -32,7 +34,7 @@ export function PaperDetail({ paper }: PaperDetailProps) {
           </h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-[var(--text-secondary)]">
-            <span className="min-w-0 truncate">{authorList(paper.authors, 4)}</span>
+            <AuthorLinks authors={paper.authors} max={4} className="min-w-0" />
             {paper.org_name && (
               <span className="flex items-center gap-1 text-[var(--text-tertiary)]">
                 <Building2 size={13} />
@@ -83,6 +85,7 @@ export function PaperDetail({ paper }: PaperDetailProps) {
                 Open in graph
               </Button>
             </Link>
+            <BookmarkButton entityId={paper.id} entityType="paper" />
           </div>
         </div>
 

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Sample C — Mono / Brutalist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#000;--fg:#fff;--dim:#8a8a8a;--dim2:#565656;--rule:#242424;--rule2:#3a3a3a}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:'Space Grotesk',system-ui,sans-serif;font-size:15px;line-height:1.5}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 28px}
+  header{border-bottom:2px solid var(--fg);position:sticky;top:0;background:var(--bg);z-index:5}
+  .bar{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+  .mark{font-weight:700;font-size:15px;letter-spacing:.02em;text-transform:uppercase}
+  nav{display:flex;gap:14px;font-size:13px;color:var(--dim);flex-wrap:wrap}
+  nav a{color:var(--dim);text-decoration:none}
+  nav a.on{color:var(--fg);text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:2px}
+  nav a:hover{color:var(--fg)}
+  nav .s{color:var(--dim2)}
+  .hero{padding:44px 0 20px;border-bottom:1px solid var(--rule)}
+  .hero .lb{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+  h1{font-size:72px;font-weight:700;line-height:.96;letter-spacing:-.03em;text-transform:uppercase;max-width:14ch}
+  .sub{color:var(--dim);font-size:16px;max-width:60ch;margin-top:18px}
+  .sec{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--fg);margin:34px 0 0;padding-bottom:10px;border-bottom:2px solid var(--fg)}
+  .list .row{display:grid;grid-template-columns:52px 1fr 90px 70px 60px;gap:16px;align-items:baseline;padding:16px 0;border-bottom:1px solid var(--rule)}
+  .list .row:hover{background:#0b0b0b}
+  .list .num{font-size:24px;font-weight:700;color:var(--dim2)}
+  .list .ttl{font-size:19px;font-weight:500;letter-spacing:-.01em}
+  .list .cat{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:4px}
+  .list .met{text-align:right}
+  .list .met .n{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .list .met .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim2)}
+  .list .d{text-align:right;font-size:16px;font-weight:500}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--rule);margin-top:2px}
+  .cols>div{padding:22px 0}
+  .cols>div:first-child{border-right:1px solid var(--rule);padding-right:28px}
+  .cols>div:last-child{padding-left:28px}
+  .barrow{margin-bottom:16px}
+  .barrow .t{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px}
+  .barrow .t b{font-weight:700}
+  .barrow .tr{height:10px;border:1px solid var(--rule2)}
+  .barrow .tr i{display:block;height:100%;background:var(--fg)}
+  .stat{display:grid;grid-template-columns:repeat(4,1fr);border:2px solid var(--fg);margin:22px 0}
+  .stat div{padding:20px;border-right:1px solid var(--rule2)}
+  .stat div:last-child{border-right:none}
+  .stat .n{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1}
+  .stat .l{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:6px}
+  .giant{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:2px solid var(--fg);margin-bottom:52px}
+  .giant>div{padding:20px 24px 24px 0;border-right:1px solid var(--rule)}
+  .giant>div:nth-child(2){padding-left:24px}
+  .giant>div:nth-child(3){padding-left:24px;border-right:none}
+  .giant .s{font-size:46px;font-weight:700;letter-spacing:-.03em}
+  .giant .d{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:2px}
+  .giant .t{font-size:17px;font-weight:500;margin-top:12px}
+  .giant .r{font-size:13px;color:var(--dim);margin-top:8px;line-height:1.55}
+  .note{font-size:13px;color:var(--dim);border:1px solid var(--rule2);padding:9px 14px;margin:20px 0}
+</style></head>
+<body>
+<header><div class="wrap"><div class="bar">
+  <span class="mark">AI Research Radar</span>
+  <nav><a class="on">Dashboard</a><span class="s">/</span><a>Papers</a><span class="s">/</span><a>Trends</a><span class="s">/</span><a>Models</a><span class="s">/</span><a>Graph</a><span class="s">/</span><a>Intelligence</a><span class="s">/</span><a>⌘K</a></nav>
+</div></div></header>
+
+<div class="wrap">
+  <div class="note">Sample C — “Stark mono / brutalist”: pure black &amp; white, heavy grotesk type, hairline rules, zero color, zero icons, top nav (no left pane).</div>
+
+  <div class="hero">
+    <div class="lb">Overview · Week of Jun 16</div>
+    <h1>What happened in AI this week</h1>
+    <div class="sub">A continuously updated intelligence layer over the global AI research ecosystem — 847 papers, 134 models, 3 breakthroughs.</div>
+  </div>
+
+  <div class="stat">
+    <div><div class="n">847</div><div class="l">Papers</div></div>
+    <div><div class="n">134</div><div class="l">Models</div></div>
+    <div><div class="n">29</div><div class="l">Benchmarks</div></div>
+    <div><div class="n">03</div><div class="l">Breakthroughs</div></div>
+  </div>
+
+  <div class="sec">Trending Now</div>
+  <div class="list">
+    <div class="row"><div class="num">01</div><div><div class="ttl">Scaling Language Models with Mixture-of-Experts Routing</div><div class="cat">LLMs · OpenAI</div></div><div class="met"><div class="n">87.4</div><div class="k">Impact</div></div><div class="met"><div class="n">91</div><div class="k">Mom</div></div><div class="d">+12</div></div>
+    <div class="row"><div class="num">02</div><div><div class="ttl">Self-Improving Agents via Verified Tool Use</div><div class="cat">AI Agents · DeepMind</div></div><div class="met"><div class="n">72.1</div><div class="k">Impact</div></div><div class="met"><div class="n">88</div><div class="k">Mom</div></div><div class="d">+8</div></div>
+    <div class="row"><div class="num">03</div><div><div class="ttl">Efficient Diffusion for Real-Time Audio Generation</div><div class="cat">Speech · Stability</div></div><div class="met"><div class="n">61.0</div><div class="k">Impact</div></div><div class="met"><div class="n">84</div><div class="k">Mom</div></div><div class="d">+18</div></div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="sec" style="margin-top:0">Emerging Areas</div>
+      <div style="margin-top:16px">
+        <div class="barrow"><div class="t"><span>AI Agents</span><b>+94%</b></div><div class="tr"><i style="width:94%"></i></div></div>
+        <div class="barrow"><div class="t"><span>Reasoning Models</span><b>+81%</b></div><div class="tr"><i style="width:81%"></i></div></div>
+        <div class="barrow"><div class="t"><span>MCP Ecosystem</span><b>+72%</b></div><div class="tr"><i style="width:72%"></i></div></div>
+        <div class="barrow"><div class="t"><span>Multimodal AI</span><b>+61%</b></div><div class="tr"><i style="width:61%"></i></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="sec" style="margin-top:0">Frontier · P(&gt;50% growth, 24w)</div>
+      <div style="margin-top:16px">
+        <div class="barrow"><div class="t"><span>Agentic AI</span><b>82%</b></div><div class="tr"><i style="width:82%"></i></div></div>
+        <div class="barrow"><div class="t"><span>Reasoning</span><b>64%</b></div><div class="tr"><i style="width:64%"></i></div></div>
+        <div class="barrow"><div class="t"><span>MCP Ecosystem</span><b>58%</b></div><div class="tr"><i style="width:58%"></i></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">Sleeping Giants</div>
+  <div class="giant">
+    <div><div class="s">88.4</div><div class="d">Implementations ▲340%</div><div class="t">Low-Rank Adaptation for Streaming Inference</div><div class="r">Twelve citations, but three independent labs shipped inference-optimized forks in three weeks.</div></div>
+    <div><div class="s">81.2</div><div class="d">Discussion ▲210%</div><div class="t">Compositional World Models for Robotics</div><div class="r">Surging discussion and rising related work despite a modest citation count.</div></div>
+    <div><div class="s">76.9</div><div class="d">HF Models ▲180%</div><div class="t">Synthetic Curricula for Reasoning Distillation</div><div class="r">A wave of derivative fine-tunes appeared on Hugging Face this month.</div></div>
+  </div>
+</div>
+</body></html>

@@ -71,3 +71,86 @@ export interface PaginatedResponse<T> {
   data: T[];
   pagination: Pagination;
 }
+
+// ── Chat ────────────────────────────────────────────────────────────────
+export interface ChatSource {
+  id: string;
+  title: string;
+  arxiv_id: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  sources?: ChatSource[];
+}
+
+export interface ChatResponse {
+  answer: string;
+  sources: ChatSource[];
+}
+
+// ── Authors & Organizations ─────────────────────────────────────────────
+export interface OrgRef {
+  id: string;
+  name: string;
+}
+
+export interface Author {
+  id: string;
+  name: string;
+  organization: OrgRef | null;
+  paper_count: number;
+  citation_count: number;
+  h_index: number;
+  papers: Paper[];
+}
+
+export interface OrgTopAuthor {
+  id: string;
+  name: string;
+  paper_count: number;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  org_type: string;
+  country: string;
+  paper_count: number;
+  papers: Paper[];
+  top_authors: OrgTopAuthor[];
+}
+
+// ── Compare ─────────────────────────────────────────────────────────────
+export interface CompareDnaEntry {
+  concept: string;
+  weight: number;
+  rationale: string;
+}
+
+export interface CompareResponse {
+  papers: PaperDetail[];
+  dna: Record<string, CompareDnaEntry[]>;
+}
+
+// ── Bookmarks & Watches ─────────────────────────────────────────────────
+export interface Bookmark {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  note?: string | null;
+  created_at: string;
+}
+
+export interface Watch {
+  id: string;
+  label: string;
+  query?: string | null;
+  category_slug?: string | null;
+  created_at: string;
+}
+
+export interface WatchDigest {
+  data: Paper[];
+}

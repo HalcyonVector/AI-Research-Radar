@@ -27,6 +27,12 @@ import {
   mockInfluence,
   mockBriefing,
   mockBriefings,
+  mockAuthor,
+  mockOrganization,
+  mockCompare,
+  mockBookmarks,
+  mockWatches,
+  mockWatchDigest,
 } from "./mockData";
 
 /**
@@ -43,12 +49,31 @@ function resolveMockFallback(
 
   // /papers, /papers/:id, /papers/:id/related, /papers/:id/metrics/history, /papers/:id/graph
   if (seg[0] === "papers") {
+    if (seg[1] === "compare") {
+      const ids = (params.ids || "").split(",").map((s) => s.trim()).filter(Boolean);
+      return mockCompare(ids);
+    }
     if (seg.length === 1) return mockPapersPage(params.cursor, Number(params.limit) || 24);
     const id = decodeURIComponent(seg[1]);
     if (seg.length === 2) return mockPaperDetail(id);
     if (seg[2] === "related") return mockRelatedPapers(id);
     if (seg[2] === "graph") return mockGraph(id);
     if (seg[2] === "metrics" && seg[3] === "history") return mockMetricsHistory(id);
+  }
+
+  if (seg[0] === "authors" && seg.length === 2) {
+    return mockAuthor(decodeURIComponent(seg[1]));
+  }
+
+  if (seg[0] === "organizations" && seg.length === 2) {
+    return mockOrganization(decodeURIComponent(seg[1]));
+  }
+
+  if (seg[0] === "bookmarks" && seg.length === 1) return mockBookmarks();
+
+  if (seg[0] === "watches") {
+    if (seg.length === 1) return mockWatches();
+    if (seg[2] === "digest") return mockWatchDigest(decodeURIComponent(seg[1]));
   }
 
   if (seg[0] === "trends") {
@@ -133,6 +158,45 @@ export async function proxyGet(
       });
     }
     return NextResponse.json(result.error, { status: result.status });
+  }
+  return NextResponse.json(result.data);
+}
+
+/**
+ * Forward a mutating request (POST/DELETE/…) to the upstream API. On upstream
+ * failure, fall back to `mockFallback` (tagged with X-Demo-Data) so demo mode
+ * stays functional offline.
+ */
+export async function proxyMutation(
+  req: NextRequest,
+  upstreamPath: string,
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
+  mockFallback: (body: Record<string, unknown>) => unknown,
+  allowedParams: string[] = []
+): Promise<NextResponse> {
+  let body: Record<string, unknown> | undefined;
+  if (method !== "DELETE") {
+    try {
+      body = (await req.json()) as Record<string, unknown>;
+    } catch {
+      body = {};
+    }
+  }
+
+  const searchParams: Record<string, string> = {};
+  const incoming = req.nextUrl.searchParams;
+  for (const key of allowedParams) {
+    const v = incoming.get(key);
+    if (v !== null) searchParams[key] = v;
+  }
+
+  const result = await safeApiFetch<unknown>(upstreamPath, { method, body, searchParams });
+  if ("error" in result) {
+    const fallback = mockFallback(body ?? {});
+    return NextResponse.json(fallback, {
+      status: 200,
+      headers: { "X-Demo-Data": "true", "Cache-Control": "no-store" },
+    });
   }
   return NextResponse.json(result.data);
 }

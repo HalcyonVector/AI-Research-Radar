@@ -589,6 +589,114 @@ Expect benchmarks to start measuring reasoning-per-dollar. The teams that win wi
   };
 }
 
+// ── Chat with paper ───────────────────────────────────────────────────────
+export function mockChat(id: string) {
+  const base = MOCK_PAPERS.find((p) => p.id === id) ?? MOCK_PAPERS[0];
+  const related = MOCK_PAPERS.filter((p) => p.id !== base.id).slice(0, 2);
+  return {
+    answer:
+      "Based on this paper, the core idea is a self-verification loop that lets the model critique and revise its own drafts before committing to a final answer. This reduces factual errors without requiring an external reward model, at the cost of some added inference latency. The approach composes cleanly with existing decoding pipelines and is model-agnostic. (Demo response — backend unreachable.)",
+    sources: [base, ...related].map((p) => ({
+      id: p.id,
+      title: p.title,
+      arxiv_id: p.arxiv_id,
+    })),
+  };
+}
+
+// ── Authors ───────────────────────────────────────────────────────────────
+export function mockAuthor(id: string) {
+  const author = AUTHORS.find((a) => a.id === id) ?? AUTHORS[0];
+  const papers = MOCK_PAPERS.filter((_, i) => i % AUTHORS.length === AUTHORS.indexOf(author)).slice(
+    0,
+    6
+  );
+  const list = papers.length > 0 ? papers : MOCK_PAPERS.slice(0, 5);
+  return {
+    id,
+    name: author.name,
+    organization: { id: "org-1", name: "Frontier AI Lab" },
+    paper_count: list.length,
+    citation_count: list.reduce((acc, p) => acc + p.metrics.citations, 0),
+    h_index: 18,
+    papers: list,
+  };
+}
+
+// ── Organizations ─────────────────────────────────────────────────────────
+export function mockOrganization(id: string) {
+  const papers = MOCK_PAPERS.slice(0, 9);
+  return {
+    id,
+    name: "Frontier AI Lab",
+    org_type: "Industry Research Lab",
+    country: "United States",
+    paper_count: papers.length,
+    papers,
+    top_authors: AUTHORS.slice(0, 5).map((a, i) => ({
+      id: a.id,
+      name: a.name,
+      paper_count: 12 - i * 2,
+    })),
+  };
+}
+
+// ── Compare papers ────────────────────────────────────────────────────────
+export function mockCompare(ids: string[]) {
+  const wanted = ids.length > 0 ? ids : ["paper-1", "paper-2"];
+  const papers = wanted
+    .map((id) => mockPaperDetail(id))
+    .filter(Boolean)
+    .slice(0, 4);
+  const dna: Record<string, ReturnType<typeof mockDNA>["composition"]> = {};
+  for (const p of papers) {
+    dna[p.id] = mockDNA(p.id).composition;
+  }
+  return { papers, dna };
+}
+
+// ── Bookmarks ─────────────────────────────────────────────────────────────
+export function mockBookmarks() {
+  return { data: [] as unknown[] };
+}
+
+export function mockCreateBookmark(body: {
+  entity_type?: string;
+  entity_id?: string;
+  note?: string;
+}) {
+  return {
+    id: `bookmark-${Date.now()}`,
+    entity_type: body.entity_type || "paper",
+    entity_id: body.entity_id || "paper-1",
+    note: body.note ?? null,
+    created_at: new Date().toISOString(),
+  };
+}
+
+// ── Watches ───────────────────────────────────────────────────────────────
+export function mockWatches() {
+  return { data: [] as unknown[] };
+}
+
+export function mockCreateWatch(body: {
+  label?: string;
+  query?: string;
+  category_slug?: string;
+}) {
+  return {
+    id: `watch-${Date.now()}`,
+    label: body.label || "New watch",
+    query: body.query ?? null,
+    category_slug: body.category_slug ?? null,
+    created_at: new Date().toISOString(),
+  };
+}
+
+export function mockWatchDigest(_id: string) {
+  return { data: MOCK_PAPERS.slice(0, 5) };
+}
+
 export function mockBriefings() {
   return Array.from({ length: 8 }, (_, i) => ({
     id: `briefing-${i + 1}`,
