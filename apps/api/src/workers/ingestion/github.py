@@ -70,6 +70,9 @@ def run(self):
                             db.add(KnowledgeGraphEdge(source_type="repo", source_id=repo.id,
                                    target_type="paper", target_id=p.id, relation="implements", source="github"))
                 db.commit()
+                if not repo.ai_summary:
+                    from src.workers.ai.repo_summary import generate as gen_repo_sum
+                    gen_repo_sum.delay(str(repo.id))
                 upserted += 1
         return {"upserted": upserted}
     finally:

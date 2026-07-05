@@ -7,6 +7,7 @@ from src.database import session_scope
 from src.models import Paper, Model, WeeklyReport
 from src.ai.llm import complete_json, model_name
 from src.ai.prompts import BRIEFING_PROMPT
+from src.config import settings
 
 
 def _render_md(bj: dict) -> str:
@@ -42,14 +43,14 @@ def generate(self):
             category_deltas="see trend radar",
         )
         try:
-            bj = complete_json(BRIEFING_PROMPT.format(**ctx))
+            bj = complete_json(BRIEFING_PROMPT.format(**ctx), model=settings.openai_model_heavy)
         except Exception:
             bj = {"this_week_in_numbers": ctx["numbers"], "big_stories": [],
                   "emerging_signals": "", "papers_worth_your_time": [p.title for p in top],
                   "model_releases": [m.name for m in models], "what_to_watch": ""}
         report = WeeklyReport(week_start=week_start, week_end=week_end, total_papers=n_papers,
                               total_models=n_models, briefing_json=bj, briefing_md=_render_md(bj),
-                              generated_at=datetime.now(timezone.utc), model_used=model_name(),
+                              generated_at=datetime.now(timezone.utc), model_used=model_name(settings.openai_model_heavy),
                               prompt_version="1", is_published=True,
                               published_at=datetime.now(timezone.utc))
         db.add(report)

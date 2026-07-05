@@ -17,7 +17,7 @@ def search(db: Session, q: str, types="papers,models,repos", limit=10) -> dict:
         results["models"] = [{"id": str(m.id), "title": m.name, "highlight": m.hf_model_id, "score": 0.7, "type": "model"} for m in rows]
     if "repos" in wanted:
         rows = db.execute(select(Repository).where(Repository.name.ilike(f"%{q}%")).order_by(desc(Repository.stars)).limit(limit)).scalars().all()
-        results["repos"] = [{"id": str(r.id), "title": r.github_full_name, "highlight": r.description or "", "score": 0.6, "type": "repo"} for r in rows]
+        results["repos"] = [{"id": str(r.id), "title": r.github_full_name, "highlight": r.description or "", "score": 0.6, "type": "repo", "ai_summary": r.ai_summary} for r in rows]
 
     return {"query": q, "results": results, "latency_ms": int((time.time() - start) * 1000)}
 

@@ -50,4 +50,5 @@ def model_item(m) -> dict:
         "downloads_total": m.downloads_total, "likes": m.likes,
         "growth_score": m.growth_score, "popularity_score": m.popularity_score,
         "linked_paper_id": str(m.linked_paper_id) if m.linked_paper_id else None,
+        "has_ai_summary": m.ai_summary is not None,
     }

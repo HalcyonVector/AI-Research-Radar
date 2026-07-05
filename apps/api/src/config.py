@@ -27,7 +27,25 @@ class Settings(BaseSettings):
     # Groq default below; get a free key at https://console.groq.com
     openai_base_url: str = "https://api.groq.com/openai/v1"
     openai_api_key: str = ""
-    openai_model: str = "llama-3.3-70b-versatile"
+    openai_model: str = "llama-3.3-70b-versatile"  # default / fallback tier
+    # Per-task routing: heavy for reasoning-dense work (papers, Layer-3 intelligence),
+    # light for high-volume/low-difficulty work (model + repo cards). Both are Groq
+    # models here. During big backfills you can set both to the light model to stay
+    # under the heavy model's daily cap.
+    openai_model_heavy: str = "llama-3.3-70b-versatile"
+    openai_model_light: str = "llama-3.1-8b-instant"
+
+    # Per-lane provider routing. Blank => fall back to the legacy global AI_MODE.
+    #   light lane = model/repo cards  -> set "ollama" to run locally (no rate limit)
+    #   heavy lane = papers + Layer-3  -> "openai" (Groq) with optional 2nd-provider failover
+    light_provider: str = ""   # "ollama" | "openai" | "cloud"
+    heavy_provider: str = ""   # "ollama" | "openai" | "cloud"
+
+    # Optional 2nd OpenAI-compatible provider, used as failover for the cloud lanes
+    # (e.g. Cerebras or OpenRouter free tier so a Groq daily cap doesn't stall papers).
+    openai_base_url_2: str = ""
+    openai_api_key_2: str = ""
+    openai_model_2: str = ""
 
     # Optional paid provider (unused in free mode)
     anthropic_api_key: str = ""

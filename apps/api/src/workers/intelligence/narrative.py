@@ -7,6 +7,7 @@ from src.database import session_scope
 from src.models import Paper, ResearchCategory, PaperCategory
 from src.models.intelligence.research_narrative import ResearchNarrative
 from src.ai.llm import complete_json, model_name
+from src.config import settings
 from src.ai.prompts import NARRATIVE_PROMPT
 
 UUID_RE = re.compile(r"\[\[paper:([0-9a-fA-F-]{36})\]\]")
@@ -42,7 +43,8 @@ def generate_research_narrative(self, scope: str = "global", scope_ref: str | No
         try:
             res = complete_json(NARRATIVE_PROMPT.format(
                 scope=scope, scope_ref=scope_ref or "", period_start=period_start, period_end=period_end,
-                shift_papers=papers_ctx, category_deltas="see radar", transitions="see evolution"))
+                shift_papers=papers_ctx, category_deltas="see radar", transitions="see evolution"),
+                model=settings.openai_model_heavy)
             text = res.get("narrative_text", "")
         except Exception:
             text = (f"Over the last {months} months, activity concentrated around "
@@ -55,7 +57,7 @@ def generate_research_narrative(self, scope: str = "global", scope_ref: str | No
                 text = text.replace(f"[[paper:{rid}]]", "")
         db.add(ResearchNarrative(scope=scope, scope_ref=scope_ref, period_start=period_start, period_end=period_end,
                narrative_text=text.strip(), referenced_entities=[__import__("uuid").UUID(r) for r in referenced] or [shift_papers[0].id],
-               generated_at=datetime.now(timezone.utc), model_used=model_name()))
+               generated_at=datetime.now(timezone.utc), model_used=model_name(settings.openai_model_heavy)))
         db.commit()
         return {"ok": True, "scope": scope, "scope_ref": scope_ref}
     finally:

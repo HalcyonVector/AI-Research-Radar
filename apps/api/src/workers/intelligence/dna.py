@@ -7,6 +7,7 @@ from src.models import Paper
 from src.models.intelligence.paper_concept_composition import PaperConceptComposition
 from src.ai.llm import complete_json, model_name
 from src.ai.prompts import DNA_PROMPT, vocabulary_block
+from src.config import settings
 from src.ai.vocabulary import VOCAB_SET
 
 
@@ -22,7 +23,8 @@ def compute_research_dna(self, since_hours: int = 24, limit: int = 500):
         for p in papers:
             try:
                 res = complete_json(DNA_PROMPT.format(title=p.title, abstract=(p.abstract or "")[:2500],
-                                                      vocabulary=vocabulary_block()))
+                                                      vocabulary=vocabulary_block()),
+                                    model=settings.openai_model_heavy)
                 concepts = res.get("concepts", [])[:6]
                 valid = [c for c in concepts if str(c.get("concept", "")).lower() in VOCAB_SET]
                 if not valid:
@@ -31,7 +33,7 @@ def compute_research_dna(self, since_hours: int = 24, limit: int = 500):
                 for c in valid:
                     db.add(PaperConceptComposition(paper_id=p.id, concept=c["concept"],
                            weight=round(c.get("weight", 0) / total * 100, 2),
-                           rationale=c.get("rationale"), model_used=model_name()))
+                           rationale=c.get("rationale"), model_used=model_name(settings.openai_model_heavy)))
                 db.commit()
                 done += 1
             except Exception:

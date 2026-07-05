@@ -110,7 +110,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
     command: ["celery", "-A", "src.celery_app", "worker", "-l", "info",
-              "-Q", "ai.summaries,ai.embeddings", "-n", "ai@%h", "--concurrency", "2"]
+              "-Q", "ai.summaries,ai.embeddings", "-n", "ai@%h", "--concurrency", "1"]
     volumes:
       - hf_cache:/app/.cache/huggingface
     extra_hosts:

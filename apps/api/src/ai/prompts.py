@@ -20,6 +20,53 @@ Return exactly this JSON shape:
 
 Rules: Be specific and write in third person. Do not invent metrics. Justify significance."""
 
+MODEL_SUMMARY_PROMPT = """You are an AI analyst. Summarize this Hugging Face model.
+Return ONLY valid JSON.
+
+Model name: {name}
+Pipeline / task type: {model_type}
+Tags: {tags}
+
+Model card (README, may be partial or empty):
+\"\"\"
+{card}
+\"\"\"
+
+Return exactly this JSON shape:
+{{
+  "what_it_is": "1-2 sentences: what this model is and what it does",
+  "capabilities": ["capability1", "capability2", "capability3"],
+  "use_cases": ["use case1", "use case2"],
+  "notable": "one sentence on anything distinctive (size, domain, license signal), or empty string"
+}}
+
+Rules: Prefer the model card when present; fall back to metadata when it is thin or empty.
+Do not invent benchmarks or numbers not stated in the card. Write in third person."""
+
+REPO_SUMMARY_PROMPT = """You are an AI analyst. Summarize this GitHub repository.
+Return ONLY valid JSON.
+
+Repository: {full_name}
+Description: {description}
+Primary language: {language}
+Topics: {topics}
+
+README (may be partial or empty):
+\"\"\"
+{readme}
+\"\"\"
+
+Return exactly this JSON shape:
+{{
+  "what_it_does": "1-2 sentences on what this project is for",
+  "key_features": ["feature1", "feature2", "feature3"],
+  "use_cases": ["use case1", "use case2"],
+  "notable": "one sentence on anything distinctive, or empty string"
+}}
+
+Rules: Prefer the README when present; fall back to metadata when it is thin or empty.
+Do not invent stars, benchmarks, or numbers not stated in the README. Write in third person."""
+
 DNA_PROMPT = """Decompose this AI paper into a weighted concept fingerprint.
 
 Title: {title}

@@ -32,7 +32,7 @@ def get_model(db: Session, model_id: str) -> dict | None:
         return None
     d = S.model_item(m)
     d.update({"description": m.description, "architecture": m.architecture, "license": m.license,
-              "tags": m.tags or [], "hf_org_name": m.hf_org_name})
+              "tags": m.tags or [], "hf_org_name": m.hf_org_name, "ai_summary": m.ai_summary})
     return d
 
 
