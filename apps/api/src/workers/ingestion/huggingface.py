@@ -13,6 +13,15 @@ SORT_BY = ["downloads", "likes", "lastModified"]
 LIMIT = 200          # page size for the recurring (light) run
 PAGE_LIMIT = 1000    # page size for the big paginated crawl
 
+# Quality gate: only spend an AI summary on models with real traction. Everything
+# is still tracked/ingested; low-traction rows just don't get a (costly) summary.
+SUMMARY_MIN_DOWNLOADS = 100
+SUMMARY_MIN_LIKES = 3
+
+
+def _worth_summarizing(downloads: int, likes: int) -> bool:
+    return (downloads or 0) >= SUMMARY_MIN_DOWNLOADS or (likes or 0) >= SUMMARY_MIN_LIKES
+
 
 def _headers():
     return {"Authorization": f"Bearer {settings.hf_api_token}"} if settings.hf_api_token else {}
@@ -83,7 +92,7 @@ def upsert_model(db, md: dict, seen: set) -> bool:
         db.add(ModelDownloadHistory(model_id=m.id, recorded_at=today,
                downloads_total=downloads, downloads_30d=downloads, likes=likes))
     db.commit()
-    if not m.ai_summary:
+    if not m.ai_summary and _worth_summarizing(downloads, likes):
         from src.workers.ai.model_summary import generate as gen_model_sum
         gen_model_sum.delay(str(m.id))
     return True

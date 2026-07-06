@@ -21,8 +21,8 @@ $DoneFlag    = Join-Path $ProjectRoot "BACKFILL-DONE.txt"
 
 $sql = @"
 select
- (select count(*) filter (where ai_summary is not null) from models),
- (select count(*) from models),
+ (select count(*) filter (where ai_summary is not null and (downloads_total >= 100 or likes >= 3)) from models),
+ (select count(*) filter (where downloads_total >= 100 or likes >= 3) from models),
  (select count(*) filter (where ai_summary is not null) from repositories),
  (select count(*) from repositories),
  (select count(*) filter (where ai_summary is not null) from papers),

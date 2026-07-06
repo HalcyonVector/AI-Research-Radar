@@ -45,7 +45,7 @@ export function SectionHeader({
     <div className="mb-3 flex items-center justify-between border-b-2 border-[var(--text-primary)] pb-2">
       <div className="flex items-center gap-2">
         {icon}
-        <h2 className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text-primary)]">
+        <h2 className="-ml-0.5 text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text-primary)]">
           {title}
         </h2>
       </div>

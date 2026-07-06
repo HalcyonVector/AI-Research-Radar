@@ -109,8 +109,12 @@ services:
       DATABASE_URL: postgresql+psycopg://radar:radar@postgres:5432/radar_dev
       REDIS_URL: redis://redis:6379/0
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    # threads pool: multiple summaries in-flight to Ollama at once WITHOUT spawning
+    # RAM-heavy worker processes (system RAM is the tight resource, not the GPU).
+    # Pair with OLLAMA_NUM_PARALLEL on the host so Ollama batches them on the GPU.
     command: ["celery", "-A", "src.celery_app", "worker", "-l", "info",
-              "-Q", "ai.summaries,ai.embeddings", "-n", "ai@%h", "--concurrency", "1"]
+              "-Q", "ai.summaries,ai.embeddings", "-n", "ai@%h",
+              "--pool", "threads", "--concurrency", "3"]
     volumes:
       - hf_cache:/app/.cache/huggingface
     extra_hosts:

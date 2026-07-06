@@ -28,6 +28,7 @@ export interface DashboardData {
     repos: number;
     breakthroughs: number;
   };
+  recently_added_models: Model[];
   sleeping_giants: unknown[];
 }
 

@@ -38,14 +38,19 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
     if (c.count > max) max = c.count;
   }
 
-  const categories = CATEGORIES.slice(0, MAX_ROWS);
+  // Build rows from the slugs actually present in the data (backend slugs like
+  // "reasoning-models"), so lookups match. Fall back to the constant list if empty.
+  const prettify = (s: string) => s.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  const dataSlugs = Array.from(new Set(cells.map((c) => c.category_slug)));
+  const rowSlugs = (dataSlugs.length ? dataSlugs : CATEGORIES.map((c) => c.slug)).slice(0, MAX_ROWS);
+  const categories = rowSlugs.map((slug) => {
+    const def = getCategory(slug);
+    return { slug, name: def.name === slug ? prettify(slug) : def.name, color: def.color };
+  });
 
   return (
     <Card className="flex h-full flex-col">
-      <SectionHeader
-        title="Activity Heatmap"
-        icon={<Activity size={15} className="text-[var(--text-tertiary)]" />}
-      />
+      <SectionHeader title="Activity Heatmap" />
 
       {loading ? (
         <div className="space-y-2">
@@ -71,11 +76,11 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full">
             {categories.map((cat) => (
-              <div key={cat.slug} className="flex items-center gap-2 py-[2px]">
-                <span className="w-24 shrink-0 truncate text-[11px] text-[var(--text-tertiary)]">
+              <div key={cat.slug} className="flex items-center gap-3 py-[3px]">
+                <span className="w-32 shrink-0 truncate text-[11px] text-[var(--text-tertiary)]">
                   {cat.name}
                 </span>
-                <div className="flex gap-[3px]">
+                <div className="flex flex-1 gap-1.5">
                   {dates.map((date) => {
                     const count = lookup.get(`${cat.slug}|${date}`) ?? 0;
                     const intensity = max > 0 ? count / max : 0;
@@ -83,7 +88,7 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
                     return (
                       <div
                         key={date}
-                        className="h-[14px] w-[14px] rounded-sm border border-[var(--border-base)]"
+                        className="h-6 flex-1 rounded-sm border border-[var(--border-base)]"
                         style={{
                           backgroundColor:
                             count > 0 ? cat.color : "var(--bg-elevated)",
@@ -96,7 +101,7 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
                 </div>
               </div>
             ))}
-            <div className="mt-3 flex items-center gap-2 pl-[104px] text-[10px] text-[var(--text-tertiary)]">
+            <div className="mt-3 flex items-center gap-2 pl-[140px] text-[10px] text-[var(--text-tertiary)]">
               <span>Less</span>
               {[0.15, 0.4, 0.65, 1].map((o, i) => (
                 <div

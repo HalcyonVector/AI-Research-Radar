@@ -15,8 +15,8 @@ $StatusFile  = Join-Path $ProjectRoot "backfill-status.json"
 
 $sql = @"
 select
- (select count(*) filter (where ai_summary is not null) from models),
- (select count(*) from models),
+ (select count(*) filter (where ai_summary is not null and (downloads_total >= 100 or likes >= 3)) from models),
+ (select count(*) filter (where downloads_total >= 100 or likes >= 3) from models),
  (select count(*) filter (where ai_summary is not null) from repositories),
  (select count(*) from repositories),
  (select count(*) filter (where ai_summary is not null) from papers),
@@ -41,14 +41,18 @@ $pct  = if ($tot) { [math]::Round(100.0 * $done / $tot, 1) } else { 0 }
 $now  = Get-Date
 
 # --- rolling ETA from the previous snapshot ---
-$eta = "-"; $rate = 0.0
+$eta = "-"; $rate = 0.0; $stale = $false
 if (Test-Path $StatusFile) {
     try {
         $prev = Get-Content $StatusFile -Raw | ConvertFrom-Json
         $dt = ($now - [datetime]$prev.ts).TotalHours
         $dDone = $done - [int]$prev.done
-        if ($dt -gt 0 -and $dDone -gt 0) {
-            $rate = [math]::Round($dDone / $dt, 1)          # items/hour
+        # If the last snapshot is old (laptop asleep / idle between runs), a
+        # wall-clock rate is meaningless. Only trust a recent (<45 min) window.
+        if ($dt -gt 0.75) {
+            $stale = $true
+        } elseif ($dt -gt 0 -and $dDone -gt 0) {
+            $rate = [math]::Round($dDone / $dt, 1)          # items/hour (active window)
             $remain = $tot - $done
             $hrs = $remain / ($dDone / $dt)
             if ($hrs -lt 1) { $eta = "{0} min" -f [math]::Round($hrs*60) }
@@ -66,7 +70,8 @@ Write-Host ("  Repos   {0}  {1,5}/{2,-5} {3,5}%" -f (Bar $rDone $rTot), $rDone, 
 Write-Host ("  Papers  {0}  {1,5}/{2,-5} {3,5}%" -f (Bar $pDone $pTot), $pDone, $pTot, ([math]::Round(100.0*$pDone/[math]::Max($pTot,1),1)))
 Write-Host ("  -------------------------------------------------")
 Write-Host ("  TOTAL   {0}  {1,5}/{2,-5} {3,5}%" -f (Bar $done $tot), $done, $tot, $pct) -ForegroundColor Green
-if ($rate -gt 0) { Write-Host ("  Rate ~{0}/hr   ETA ~{1} (since last check)" -f $rate, $eta) -ForegroundColor DarkGray }
+if ($rate -gt 0) { Write-Host ("  Rate ~{0}/hr   ETA ~{1} (recent active window)" -f $rate, $eta) -ForegroundColor DarkGray }
+elseif ($stale) { Write-Host "  (last snapshot >45 min old - run again while it's actively summarizing for a live rate/ETA)" -ForegroundColor DarkGray }
 Write-Host ""
 
 # --- write status for the scheduled ping ---

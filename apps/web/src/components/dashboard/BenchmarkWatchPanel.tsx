@@ -29,10 +29,7 @@ export function BenchmarkWatchPanel({ items }: BenchmarkWatchPanelProps) {
 
   return (
     <Card className="flex h-full flex-col">
-      <SectionHeader
-        title="Benchmark Watch"
-        icon={<Gauge size={15} className="text-[var(--text-tertiary)]" />}
-      />
+      <SectionHeader title="Benchmark Watch" />
 
       {data.length === 0 ? (
         <EmptyState

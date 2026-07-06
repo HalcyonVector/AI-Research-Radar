@@ -20,7 +20,6 @@ export function TrendingPapersPanel({ papers, loading }: TrendingPapersPanelProp
     <Card className="flex h-full flex-col">
       <SectionHeader
         title="Trending Papers"
-        icon={<FileText size={15} className="text-[var(--text-tertiary)]" />}
         action={
           <Link
             href="/papers"

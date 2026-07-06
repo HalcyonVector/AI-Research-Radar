@@ -8,6 +8,7 @@ import { EmergingAreasPanel } from "@/components/dashboard/EmergingAreasPanel";
 import { StatsPanel } from "@/components/dashboard/StatsPanel";
 import { WeeklyBriefingCard } from "@/components/dashboard/WeeklyBriefingCard";
 import { BreakoutModelsPanel } from "@/components/dashboard/BreakoutModelsPanel";
+import { RecentlyAddedPanel } from "@/components/dashboard/RecentlyAddedPanel";
 import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
 import { SleepingGiantsPanel } from "@/components/dashboard/SleepingGiantsPanel";
 import { BenchmarkWatchPanel } from "@/components/dashboard/BenchmarkWatchPanel";
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const briefingPreview = data?.latest_briefing_preview ?? null;
   const heatmapData = data?.heatmap_data ?? [];
   const stats = data?.stats ?? { papers: 0, models: 0, repos: 0, breakthroughs: 0 };
+  const recentModels = data?.recently_added_models ?? [];
 
   return (
     <div>
@@ -35,12 +37,16 @@ export default function DashboardPage() {
           <TrendingPapersPanel papers={trendingPapers} loading={isLoading} />
         </BentoCell>
 
-        <BentoCell colSpan={1} rowSpan={2}>
+        <BentoCell colSpan={1}>
           <EmergingAreasPanel trends={emergingCategories} loading={isLoading} />
         </BentoCell>
 
         <BentoCell colSpan={1}>
           <StatsPanel stats={stats} loading={isLoading} />
+        </BentoCell>
+
+        <BentoCell colSpan={1}>
+          <RecentlyAddedPanel models={recentModels} loading={isLoading} />
         </BentoCell>
 
         <BentoCell colSpan={1}>

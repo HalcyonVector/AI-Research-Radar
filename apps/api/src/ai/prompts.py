@@ -41,6 +41,9 @@ Return exactly this JSON shape:
 }}
 
 Rules: Prefer the model card when present; fall back to metadata when it is thin or empty.
+ALWAYS return 2-4 concrete use_cases. If the card is empty, infer them from the task type
+and tags (e.g. a text-to-image model -> "generating images from text prompts"; a sentence
+embedding model -> "semantic search", "clustering"). Never return an empty use_cases list.
 Do not invent benchmarks or numbers not stated in the card. Write in third person."""
 
 REPO_SUMMARY_PROMPT = """You are an AI analyst. Summarize this GitHub repository.
@@ -65,6 +68,8 @@ Return exactly this JSON shape:
 }}
 
 Rules: Prefer the README when present; fall back to metadata when it is thin or empty.
+ALWAYS return 2-4 concrete use_cases, inferring from the description, topics and language
+when the README is thin. Never return an empty use_cases list.
 Do not invent stars, benchmarks, or numbers not stated in the README. Write in third person."""
 
 DNA_PROMPT = """Decompose this AI paper into a weighted concept fingerprint.
