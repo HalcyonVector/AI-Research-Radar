@@ -23,10 +23,7 @@ export function EmergingAreasPanel({ trends, loading }: EmergingAreasPanelProps)
 
   return (
     <Card className="flex h-full flex-col">
-      <SectionHeader
-        title="Emerging Areas"
-        icon={<TrendingUp size={15} className="text-[var(--text-tertiary)]" />}
-      />
+      <SectionHeader title="Emerging Areas" />
 
       {loading ? (
         <div className="space-y-3">

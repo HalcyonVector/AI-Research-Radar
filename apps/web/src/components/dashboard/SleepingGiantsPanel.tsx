@@ -29,7 +29,6 @@ export function SleepingGiantsPanel({ limit = 3, teaser = false }: SleepingGiant
     <Card className="flex h-full flex-col">
       <SectionHeader
         title="Sleeping Giants"
-        icon={<Moon size={15} className="text-[var(--text-tertiary)]" />}
         action={
           teaser ? (
             <Link

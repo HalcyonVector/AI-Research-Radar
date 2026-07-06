@@ -77,6 +77,7 @@ celery_app.conf.beat_schedule = {
     "social-6h": {"task": "workers.ingestion.social.run", "schedule": crontab(minute=20, hour="*/6")},
     "refresh-views-1h": {"task": "workers.maintenance.refresh_views.run", "schedule": crontab(minute=5)},
     "score-papers-nightly": {"task": "workers.scoring.paper_scores.run_all", "schedule": crontab(minute=0, hour=4)},
+    "score-models-nightly": {"task": "workers.scoring.model_scores.run", "schedule": crontab(minute=15, hour=4)},
     "trend-scores-daily": {"task": "workers.scoring.trend_scores.run", "schedule": crontab(minute=30, hour=4)},
     "weekly-briefing": {"task": "workers.ai.briefing.generate", "schedule": crontab(minute=0, hour=6, day_of_week=1)},
     # Layer 3 (spec 5.8)

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Newspaper, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { formatDate, truncate } from "@/lib/formatters";
@@ -40,6 +39,13 @@ export function WeeklyBriefingCard({ preview, loading }: WeeklyBriefingCardProps
     );
   }
 
+  // The briefing excerpt is raw markdown; strip the syntax for a clean preview.
+  const cleanExcerpt = (preview.excerpt || "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[#*`_>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
   return (
     <Card className="relative flex h-full flex-col overflow-hidden bg-gradient-to-br from-[var(--bg-surface)] via-[var(--bg-surface)] to-[var(--accent-subtle)]">
       <div
@@ -53,20 +59,21 @@ export function WeeklyBriefingCard({ preview, loading }: WeeklyBriefingCardProps
           Weekly Briefing
         </p>
         <h3 className="text-base font-semibold leading-snug text-[var(--text-primary)]">
-          {preview.title}
+          {preview.title || "This Week in AI Research"}
         </h3>
         <p className="mt-2 flex-1 text-sm leading-relaxed text-[var(--text-secondary)]">
-          {truncate(preview.excerpt, 180)}
+          {truncate(cleanExcerpt, 180)}
         </p>
         <p className="mt-3 text-xs text-[var(--text-tertiary)]">
           Week of {formatDate(preview.week_start)}
         </p>
         <div className="mt-4">
-          <Link href={`/briefings/${preview.week_start}`}>
-            <Button variant="primary" size="sm">
-              Read briefing
-              <ArrowRight size={13} />
-            </Button>
+          <Link
+            href={`/briefings/${preview.week_start}`}
+            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--accent-hover)] hover:opacity-80"
+          >
+            Read briefing
+            <ArrowRight size={13} />
           </Link>
         </div>
       </div>

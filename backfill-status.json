@@ -1,21 +1,21 @@
 ﻿{
-    "ts":  "2026-07-05T05:52:39.8805424+05:30",
-    "done":  10333,
-    "total":  10350,
-    "percent":  99.8,
+    "ts":  "2026-07-06T21:35:38.0632982+05:30",
+    "done":  33158,
+    "total":  33158,
+    "percent":  100,
     "models":  {
-                   "total":  9384,
-                   "done":  9367
+                   "total":  32191,
+                   "done":  32191
                },
     "repos":  {
-                  "total":  117,
-                  "done":  117
+                  "total":  118,
+                  "done":  118
               },
     "papers":  {
                    "total":  849,
                    "done":  849
                },
-    "rate_per_hour":  1030,
-    "eta":  "1 min",
-    "complete":  false
+    "rate_per_hour":  0,
+    "eta":  "-",
+    "complete":  true
 }

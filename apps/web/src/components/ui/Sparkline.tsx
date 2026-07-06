@@ -28,12 +28,15 @@ export function Sparkline({
   }
   const min = Math.min(...data);
   const max = Math.max(...data);
+  const flat = max === min; // all-equal (e.g. all-zero) trend
   const span = max - min || 1;
   const stepX = data.length > 1 ? width / (data.length - 1) : width;
 
   const points = data.map((v, i) => {
     const x = i * stepX;
-    const y = height - ((v - min) / span) * (height - 2) - 1;
+    // Center a flat line vertically so it lines up with the growth number beside it,
+    // instead of sinking to the bottom of the box.
+    const y = flat ? height / 2 : height - ((v - min) / span) * (height - 2) - 1;
     return [x, y] as const;
   });
 
