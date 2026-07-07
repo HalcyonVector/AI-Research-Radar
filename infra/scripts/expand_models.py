@@ -1,14 +1,18 @@
 """Kick off a big Hugging Face model crawl (expand the tracked set).
 
 Run inside the api container:
-    docker compose exec -e PYTHONPATH=/app api python /repo/infra/scripts/expand_models.py 25000
+    docker compose exec -e PYTHONPATH=/app api python /repo/infra/scripts/expand_models.py 50000
 
-Args:  [target=25000]  [sort=downloads]
+Args:  [target=50000]  [sort=downloads]
 
 Enqueues the crawl on worker-ingestion (runs in the background, survives closing
 the terminal). It paginates HF, upserts each model, and queues its AI summary to
 worker-ai (your local Ollama light lane). Idempotent — safe to re-run; already
 -summarized models are skipped.
+
+On a CELERY_EAGER deployment (no separate worker, e.g. Render free tier), this
+runs synchronously in whatever process invokes it instead of enqueuing — run it
+as a one-off shell/job against the API container, not as part of a web request.
 """
 import sys
 from src.workers.ingestion.huggingface import crawl
@@ -20,7 +24,7 @@ SORTS = ["downloads", "likes"]
 
 
 def main() -> None:
-    target = int(sys.argv[1]) if len(sys.argv) > 1 else 25000
+    target = int(sys.argv[1]) if len(sys.argv) > 1 else 50000
     sort = sys.argv[2] if len(sys.argv) > 2 else "downloads"
     # "all" sweeps every sort axis in one go (deduped by the crawl's upsert).
     sorts = SORTS if sort.lower() == "all" else [sort]

@@ -2,7 +2,7 @@
 from sqlalchemy import select
 from src.celery_app import celery_app
 from src.database import session_scope
-from src.models import Paper, PaperAuthor, KnowledgeGraphEdge
+from src.models import Paper, KnowledgeGraphEdge
 
 
 def _ensure_edge(db, st, sid, tt, tid, rel, source="derived", props=None, weight=1.0):

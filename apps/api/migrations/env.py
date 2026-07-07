@@ -7,7 +7,11 @@ from src.database import Base
 import src.models  # noqa: F401 — register all tables
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.sqlalchemy_url)
+# configparser treats "%" as interpolation syntax, so a percent-encoded password
+# (e.g. from a URL-escaped special character) must have its "%" doubled to "%%"
+# before being handed to set_main_option, or configparser raises
+# "invalid interpolation syntax". Doubling round-trips correctly on read.
+config.set_main_option("sqlalchemy.url", settings.sqlalchemy_url.replace("%", "%%"))
 if config.config_file_name:
     fileConfig(config.config_file_name)
 target_metadata = Base.metadata

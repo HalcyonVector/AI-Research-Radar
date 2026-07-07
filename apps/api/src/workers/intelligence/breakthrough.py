@@ -5,7 +5,6 @@ from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper, PaperMetricsHistory, KnowledgeGraphEdge
 from src.models.intelligence.paper_intelligence_scores import PaperIntelligenceScores
-from src.models.intelligence.paper_concept_composition import PaperConceptComposition
 from src.utils.scoring import emerging_breakthrough_score, influence_score
 
 

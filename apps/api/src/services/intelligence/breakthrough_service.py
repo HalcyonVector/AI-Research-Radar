@@ -1,6 +1,6 @@
 """Sleeping Giants + Influence read (spec 1.4.8.3, 1.4.8.8)."""
 from datetime import datetime, timezone
-from sqlalchemy import select, desc, join
+from sqlalchemy import select, desc
 from sqlalchemy.orm import Session
 from src.models import Paper, PaperCategory, ResearchCategory
 from src.models.intelligence.paper_intelligence_scores import PaperIntelligenceScores

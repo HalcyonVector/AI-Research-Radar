@@ -1,7 +1,7 @@
 """Research narratives + chain reads (spec 1.4.8.10, .1, .2, .4, .6, .7)."""
 from sqlalchemy import select, desc
 from sqlalchemy.orm import Session
-from src.models import Paper, ResearchCategory, Organization
+from src.models import Paper, Organization
 from src.models.intelligence.research_narrative import ResearchNarrative
 from src.models.intelligence.evolution_timeline_event import EvolutionTimelineEvent
 from src.models.intelligence.collaboration_cluster import CollaborationCluster
@@ -53,7 +53,7 @@ def evolution(db: Session, concept: str) -> dict:
 
 
 def collaborations(db: Session, concept=None) -> dict:
-    stmt = select(CollaborationCluster).where(CollaborationCluster.is_active == True)
+    stmt = select(CollaborationCluster).where(CollaborationCluster.is_active.is_(True))
     if concept:
         stmt = stmt.where(CollaborationCluster.formed_around_concept == concept)
     rows = db.execute(stmt.order_by(desc(CollaborationCluster.cohesion_score))).scalars().all()

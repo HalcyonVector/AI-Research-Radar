@@ -18,7 +18,7 @@ def generate_all():
     generate_research_narrative.delay("global", None)
     db = session_scope()
     try:
-        for c in db.execute(select(ResearchCategory).where(ResearchCategory.is_active == True)).scalars().all():
+        for c in db.execute(select(ResearchCategory).where(ResearchCategory.is_active.is_(True))).scalars().all():
             generate_research_narrative.delay("category", c.slug)
     finally:
         db.close()

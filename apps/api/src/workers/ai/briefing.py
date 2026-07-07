@@ -1,5 +1,4 @@
 """Weekly briefing generation (spec 5.5 / 1.4.5)."""
-import json
 from datetime import date, timedelta, datetime, timezone
 from sqlalchemy import select, desc, func
 from src.celery_app import celery_app

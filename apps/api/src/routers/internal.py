@@ -24,18 +24,19 @@ def ingest_trigger():
 
 @router.post("/ingest/enrich")
 def ingest_enrich():
-    """Run after ingestion: backfill citations + social mentions, then rescore + Layer 3."""
-    from src.workers.ingestion import semantic_scholar, social
+    """Run after ingestion: backfill citations + affiliations + social mentions, then rescore + Layer 3."""
+    from src.workers.ingestion import semantic_scholar, social, openalex
     from src.workers.scoring import paper_scores, trend_scores, model_scores
     from src.workers.intelligence import orchestrate
     semantic_scholar.run.delay()
+    openalex.run.delay()
     social.run.delay()
     paper_scores.run_all.delay()
     trend_scores.run.delay()
     model_scores.run.delay()
     orchestrate.run_daily.delay()
-    return {"status": "queued", "jobs": ["semantic_scholar", "social", "paper_scores",
-                                          "trend_scores", "model_scores", "intelligence"]}
+    return {"status": "queued", "jobs": ["semantic_scholar", "openalex_affiliations", "social",
+                                          "paper_scores", "trend_scores", "model_scores", "intelligence"]}
 
 
 @router.post("/scores/recompute")

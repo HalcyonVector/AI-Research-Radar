@@ -140,3 +140,18 @@ export interface Narrative {
 export interface NarrativesResponse {
   data: Narrative[];
 }
+
+export interface TalentMove {
+  author_id: string;
+  author_name: string | null;
+  from_org: { id: string; name: string } | null;
+  to_org: { id: string; name: string } | null;
+  moved_around: string | null;
+  via_paper: { id: string; arxiv_id: string | null; title: string };
+}
+
+export interface TalentFlowResponse {
+  data: TalentMove[];
+  total_moves_found: number;
+  generated_at: string;
+}

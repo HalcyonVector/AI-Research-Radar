@@ -12,7 +12,7 @@ def _latest_snapshot(db: Session, cat_id, period="weekly"):
 
 
 def list_trends(db: Session) -> dict:
-    cats = db.execute(select(ResearchCategory).where(ResearchCategory.is_active == True)
+    cats = db.execute(select(ResearchCategory).where(ResearchCategory.is_active.is_(True))
                       .order_by(ResearchCategory.display_order)).scalars().all()
     out = []
     for c in cats:

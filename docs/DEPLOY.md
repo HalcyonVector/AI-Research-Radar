@@ -175,7 +175,7 @@ jobs:
       - run: |
           curl -fsS "${{ secrets.API_BASE_URL }}/health" || true
           curl -fsS -X POST \
-            -H "X-API-Key: ${{ secrets.API_SECRET_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.API_SECRET_KEY }}" \
             "${{ secrets.API_BASE_URL }}/api/v1/internal/ingest/trigger"
 ```
 

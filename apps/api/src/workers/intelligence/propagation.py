@@ -3,7 +3,6 @@ from sqlalchemy import select
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper, Citation, PaperAuthor, Author, Organization, KnowledgeGraphEdge
-from src.models.intelligence.paper_concept_composition import PaperConceptComposition
 
 
 def _org_name(db, paper: Paper) -> str | None:

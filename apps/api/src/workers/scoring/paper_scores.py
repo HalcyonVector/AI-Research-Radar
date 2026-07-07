@@ -1,10 +1,10 @@
 """Nightly paper scoring (spec 3.3)."""
-from datetime import date, datetime, timezone
+from datetime import date
 import numpy as np
-from sqlalchemy import select, func
+from sqlalchemy import select
 from src.celery_app import celery_app
 from src.database import session_scope
-from src.models import Paper, PaperMetricsHistory, PaperCategory
+from src.models import Paper, PaperMetricsHistory
 from src.utils.scoring import impact_score, momentum_score, innovation_score, composite_score
 
 

@@ -39,7 +39,7 @@ A reasoning layer over the knowledge graph. Every capability is computed from da
 
 | Component | Technology | Details |
 |-----------|-----------|---------|
-| **Frontend** | Next.js 14 (App Router) + TypeScript | RSC, TanStack Query, Tailwind, renders offline with demo-data fallback |
+| **Frontend** | Next.js 14 (App Router) + TypeScript | RSC, TanStack Query, Tailwind, always fetches real data from the API (no mock/demo fallback) |
 | **Visualization** | D3.js + Recharts | Force-directed graph, radar, sparklines, score rings |
 | **Backend API** | FastAPI (Python 3.12) | 39 REST endpoints under `/api/v1`, cursor pagination, RFC 9457 errors |
 | **Task Queue** | Celery + Redis | 26 tasks across ingestion / AI / scoring / graph / intelligence queues |
@@ -83,15 +83,16 @@ python ../../infra/scripts/seed_demo.py
 - API + Swagger docs → http://localhost:8000/docs
 - Celery monitor (Flower) → http://localhost:5555
 
-### Option 2: Frontend Only (Offline Demo)
+### Option 2: Frontend Only (Requires a Running Backend)
 
-The dashboard renders fully with built-in mock data when the backend is down — great for a quick look:
+The frontend always calls the real API — there is no offline/mock mode. Point it at an
+already-running backend (local Docker stack, or a deployed API) via `API_BASE_URL`:
 
 ```bash
 cd apps/web
 npm install
-cp .env.local.example .env.local
-npm run dev                   # http://localhost:3000
+cp .env.local.example .env.local   # set API_BASE_URL to your running backend
+npm run dev                        # http://localhost:3000
 ```
 
 ### Option 3: Live Ingestion (Real Papers)
@@ -299,8 +300,8 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 ### Issue: arXiv ingestion returns 0 papers
 **Solution:** Normal occasionally — arXiv enforces a 3s delay and may be briefly down. Check Flower for errors and retry in ~30 min.
 
-### Issue: Frontend builds but pages are empty
-**Solution:** The API is unreachable, so it falls back to demo data (a "Demo data" badge shows in the top bar). Set `API_BASE_URL` in `apps/web/.env.local` to your running backend.
+### Issue: Frontend builds but pages are empty or show errors
+**Solution:** The frontend has no mock/demo fallback — it only ever shows real data. If pages are empty or erroring, the API is unreachable. Set `API_BASE_URL` in `apps/web/.env.local` to your running backend and confirm `curl $API_BASE_URL/health` returns 200.
 
 ### Issue: Render service is slow on first load
 **Solution:** Free web services sleep after ~15 min idle and cold-start (~30s). The `ingest-cron.yml` workflow keeps it warm on a schedule.
@@ -321,6 +322,8 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 - [ ] Export to CSV / PDF briefings
 - [ ] Mobile PWA
 - [ ] Light/dark theme toggle
+- [ ] Talent Flow tracker — author org-affiliation changes over time (in progress: migration 0005 + OpenAlex enrichment landed, UI next)
+- [ ] Lab Scorecard — per-org publication velocity, open-source rate, trending vs cooling
 
 ---
 

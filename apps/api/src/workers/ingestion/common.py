@@ -1,7 +1,7 @@
 """Shared ingestion helpers."""
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from src.models import Author, Organization, PaperAuthor, ResearchCategory, PaperCategory
+from src.models import Author, Organization, ResearchCategory
 from src.utils.text import normalize_name
 
 

@@ -34,6 +34,6 @@ jobs:
           echo "Triggering ingestion..."
           curl -fsS -X POST \
             -H "Content-Type: application/json" \
-            -H "X-API-Key: ${API_SECRET_KEY}" \
+            -H "Authorization: Bearer ${API_SECRET_KEY}" \
             "${API_BASE_URL}/api/v1/internal/ingest/trigger" \
             && echo "" && echo "ingest triggered"

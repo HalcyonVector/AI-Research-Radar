@@ -7,7 +7,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   return proxyMutation(
     req,
     `/watches/${encodeURIComponent(params.id)}`,
-    "DELETE",
-    () => ({ ok: true, id: params.id })
+    "DELETE"
   );
 }

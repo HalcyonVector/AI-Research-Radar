@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useDemoStore } from "@/stores/demo";
 import type { ChatMessage, ChatResponse } from "@/types/paper";
 
 interface ChatArgs {
@@ -15,14 +14,6 @@ async function postChat(paperId: string, args: ChatArgs): Promise<ChatResponse> 
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(args),
   });
-
-  if (res.headers.get("X-Demo-Data") === "true") {
-    try {
-      useDemoStore.getState().setDemo(true);
-    } catch {
-      /* store not ready */
-    }
-  }
 
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
