@@ -5,6 +5,7 @@ import { Brain, ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BentoGrid, BentoCell } from "@/components/layout/BentoGrid";
 import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { SleepingGiantsPanel } from "@/components/dashboard/SleepingGiantsPanel";
 import { FrontierPredictorPanel } from "@/components/intelligence/FrontierPredictorPanel";
 import { PropagationChain } from "@/components/intelligence/PropagationChain";
@@ -25,7 +26,7 @@ const ENTRIES = [
 ];
 
 export default function IntelligencePage() {
-  const { data } = useNarratives({ scope: "global", limit: 1 });
+  const { data, isLoading } = useNarratives({ scope: "global", limit: 1 });
   const narrative = data?.data?.[0];
 
   return (
@@ -36,14 +37,22 @@ export default function IntelligencePage() {
         description="Why it's happening, where it's going, and what it means. The reasoning layer over the raw research signal."
       />
 
-      {narrative && (
+      {isLoading ? (
+        <div className="mb-6">
+          <Card className="flex flex-col">
+            <Skeleton className="mb-3 h-4 w-1/3" />
+            <Skeleton className="mb-2 h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </Card>
+        </div>
+      ) : narrative ? (
         <div className="mb-6">
           <NarrativeCard narrative={narrative} />
         </div>
-      )}
+      ) : null}
 
       <BentoGrid>
-        <BentoCell colSpan={2} rowSpan={2}>
+        <BentoCell colSpan={2} className="self-start">
           <SleepingGiantsPanel teaser limit={3} />
         </BentoCell>
         <BentoCell colSpan={2} rowSpan={2}>
