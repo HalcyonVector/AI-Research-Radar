@@ -58,7 +58,7 @@ export interface CrossPollinationResponse {
 export interface DNAComponent {
   concept: string;
   weight: number;
-  rationale: string;
+  rationale: string | null;
 }
 
 export interface DNAResponse {

@@ -1,4 +1,5 @@
 """Layer 3 — Research Intelligence Engine endpoints (spec 1.4.8 / 4.2)."""
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
@@ -9,6 +10,13 @@ from src.services.intelligence import (
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 
 
+def _validate_uuid(paper_id: str) -> None:
+    try:
+        uuid.UUID(paper_id)
+    except ValueError:
+        raise HTTPException(404, "Paper not found")
+
+
 @router.get("/sleeping-giants")
 def sleeping_giants(limit: int = 10, category: str | None = None, db: Session = Depends(get_db)):
     return breakthrough_service.sleeping_giants(db, limit, category)
@@ -16,6 +24,7 @@ def sleeping_giants(limit: int = 10, category: str | None = None, db: Session = 
 
 @router.get("/influence/{paper_id}")
 def influence(paper_id: str, db: Session = Depends(get_db)):
+    _validate_uuid(paper_id)
     r = breakthrough_service.influence(db, paper_id)
     if not r:
         raise HTTPException(404, "No influence score computed for this paper")
@@ -24,11 +33,13 @@ def influence(paper_id: str, db: Session = Depends(get_db)):
 
 @router.get("/dna/{paper_id}")
 def dna(paper_id: str, db: Session = Depends(get_db)):
+    _validate_uuid(paper_id)
     return dna_service.get_dna(db, paper_id)
 
 
 @router.get("/dna/{paper_id}/similar")
 def dna_similar(paper_id: str, db: Session = Depends(get_db)):
+    _validate_uuid(paper_id)
     return dna_service.similar_dna(db, paper_id)
 
 
@@ -49,6 +60,7 @@ def propagation(seed_id: str, seed_type: str = "paper", db: Session = Depends(ge
 
 @router.get("/genealogy/{paper_id}")
 def genealogy(paper_id: str, depth: int = 5, db: Session = Depends(get_db)):
+    _validate_uuid(paper_id)
     return narrative_service.genealogy(db, paper_id, depth)
 
 
