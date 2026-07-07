@@ -11,7 +11,6 @@ import { BreakoutModelsPanel } from "@/components/dashboard/BreakoutModelsPanel"
 import { RecentlyAddedPanel } from "@/components/dashboard/RecentlyAddedPanel";
 import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
 import { SleepingGiantsPanel } from "@/components/dashboard/SleepingGiantsPanel";
-import { BenchmarkWatchPanel } from "@/components/dashboard/BenchmarkWatchPanel";
 
 export default function DashboardPage() {
   const { data, isLoading } = useDashboard();
@@ -63,10 +62,6 @@ export default function DashboardPage() {
 
         <BentoCell colSpan={2}>
           <SleepingGiantsPanel teaser limit={3} />
-        </BentoCell>
-
-        <BentoCell colSpan={2}>
-          <BenchmarkWatchPanel />
         </BentoCell>
       </BentoGrid>
     </div>
