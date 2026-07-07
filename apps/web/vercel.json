@@ -1,19 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "//": "Vercel config for the Next.js 14 frontend. In the Vercel project settings set 'Root Directory' = apps/web. Set API_BASE_URL and API_SECRET_KEY as Environment Variables in the dashboard (do not commit secrets).",
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
-  "outputDirectory": ".next",
-  "env": {
-    "API_BASE_URL": "@api_base_url",
-    "API_SECRET_KEY": "@api_secret_key"
-  },
-  "build": {
-    "env": {
-      "API_BASE_URL": "@api_base_url",
-      "API_SECRET_KEY": "@api_secret_key",
-      "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
-    }
-  }
+  "outputDirectory": ".next"
 }
