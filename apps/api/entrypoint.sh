@@ -44,16 +44,6 @@ done
 
 # ---- 2. Migrations --------------------------------------------------------
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
-  # TEMPORARY DIAGNOSTICS — remove once the ModuleNotFoundError is confirmed fixed.
-  log "DEBUG pwd=$(pwd)"
-  log "DEBUG PYTHONPATH=${PYTHONPATH:-<unset>}"
-  log "DEBUG ls /app -> $(ls -1 /app | tr '\n' ' ')"
-  log "DEBUG ls /app/src -> $(ls -1 /app/src 2>&1 | tr '\n' ' ')"
-  python3 -c "import sys; print('[entrypoint] DEBUG sys.path=', sys.path)"
-  python3 -c "import src; print('[entrypoint] DEBUG plain \"import src\" OK, src.__file__=', getattr(src, '__file__', 'NAMESPACE:'+str(list(src.__path__))))" || log "DEBUG plain 'import src' FAILED"
-  which alembic || log "DEBUG: no alembic on PATH"
-  head -1 "$(which alembic)" || true
-
   log "running alembic migrations ..."
   alembic upgrade head
 else
