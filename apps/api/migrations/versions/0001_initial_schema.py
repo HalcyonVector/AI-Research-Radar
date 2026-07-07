@@ -6,7 +6,6 @@ Create Date: 2026-07-03
 """
 from alembic import op
 from src.database import Base
-from src.config import settings
 import src.models  # noqa: F401
 
 revision = "0001"
@@ -24,11 +23,10 @@ def upgrade() -> None:
     # Create all ORM tables
     Base.metadata.create_all(bind=bind)
 
-    dim = settings.embedding_dim
     # Vector ANN index (IVFFlat, cosine)
     op.execute(
-        f"CREATE INDEX IF NOT EXISTS idx_papers_embedding ON papers "
-        f"USING ivfflat (abstract_embedding vector_cosine_ops) WITH (lists = 100)"
+        "CREATE INDEX IF NOT EXISTS idx_papers_embedding ON papers "
+        "USING ivfflat (abstract_embedding vector_cosine_ops) WITH (lists = 100)"
     )
     # Full-text search index
     op.execute(

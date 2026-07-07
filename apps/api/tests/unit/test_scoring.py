@@ -1,4 +1,4 @@
-from src.utils.scoring import (impact_score, momentum_score, innovation_score, composite_score,
+from src.utils.scoring import (impact_score, momentum_score, composite_score,
                                emerging_breakthrough_score, influence_score, growth_score)
 
 

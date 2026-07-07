@@ -1,6 +1,5 @@
 """Shared column helpers."""
 import uuid
-from datetime import datetime
 from sqlalchemy import DateTime, func
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.dialects.postgresql import UUID
