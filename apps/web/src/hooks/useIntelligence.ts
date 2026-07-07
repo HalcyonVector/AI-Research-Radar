@@ -15,6 +15,7 @@ import type {
   FrontierResponse,
   NarrativesResponse,
   TalentFlowResponse,
+  LabScorecardResponse,
 } from "@/types/intelligence";
 
 export function useSleepingGiants(opts?: { limit?: number; category?: string }) {
@@ -124,6 +125,17 @@ export function useTalentFlow(opts?: { limit?: number; orgId?: string }) {
       fetchJson<TalentFlowResponse>("/api/intelligence/talent-flow", {
         limit: opts?.limit,
         org_id: opts?.orgId,
+      }),
+  });
+}
+
+export function useLabScorecard(opts?: { limit?: number; orgType?: string }) {
+  return useQuery({
+    queryKey: ["lab-scorecard", opts],
+    queryFn: () =>
+      fetchJson<LabScorecardResponse>("/api/intelligence/lab-scorecard", {
+        limit: opts?.limit,
+        org_type: opts?.orgType,
       }),
   });
 }

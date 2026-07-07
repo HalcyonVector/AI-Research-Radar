@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.services.intelligence import (
     dna_service, breakthrough_service, frontier_service, narrative_service, talent_service,
+    lab_scorecard_service,
 )
 
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
@@ -82,3 +83,9 @@ def collaborations(concept: str | None = None, db: Session = Depends(get_db)):
 @router.get("/talent-flow")
 def talent_flow(limit: int = 20, org_id: str | None = None, db: Session = Depends(get_db)):
     return talent_service.recent_moves(db, limit, org_id)
+
+
+@router.get("/lab-scorecard")
+def lab_scorecard(limit: int = 20, org_type: str | None = None, db: Session = Depends(get_db)):
+    """Rank organizations by research output, impact, and momentum (spec: Lab Scorecard)."""
+    return lab_scorecard_service.scorecard(db, limit, org_type)

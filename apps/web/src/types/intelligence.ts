@@ -156,3 +156,29 @@ export interface TalentFlowResponse {
   total_moves_found: number;
   generated_at: string;
 }
+
+export interface LabScorecardOrgRef {
+  id: string;
+  name: string;
+  org_type: string | null;
+  country: string | null;
+}
+
+export interface LabScorecardEntry {
+  org: LabScorecardOrgRef;
+  paper_count: number;
+  author_count: number;
+  avg_impact_score: number;
+  total_citations: number;
+  papers_30d: number;
+  output_score: number;
+  impact_score: number;
+  momentum_score: number;
+  composite_score: number;
+  top_papers: { id: string; arxiv_id: string | null; title: string }[];
+}
+
+export interface LabScorecardResponse {
+  data: LabScorecardEntry[];
+  generated_at: string;
+}
