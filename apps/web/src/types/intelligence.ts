@@ -67,12 +67,13 @@ export interface DNAResponse {
 }
 
 export interface DNASimilar {
-  paper: { id: string; title: string };
-  distance: number;
+  paper: { id: string; title: string; arxiv_id?: string };
+  genetic_distance: number;
 }
 
 export interface DNASimilarResponse {
-  data: DNASimilar[];
+  paper_id: string;
+  matches: DNASimilar[];
 }
 
 export interface EvolutionStage {
