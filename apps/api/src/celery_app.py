@@ -2,6 +2,7 @@
 
 Task modules are imported explicitly via TASK_MODULES below.
 """
+import ssl
 from celery import Celery
 from celery.schedules import crontab
 
@@ -45,6 +46,21 @@ celery_app = Celery(
     backend=settings.redis_url,
     include=TASK_MODULES,
 )
+
+# Upstash (and most hosted Redis) requires TLS via `rediss://`. Celery's Redis
+# transport (kombu) does not reliably honor `?ssl_cert_reqs=...` embedded in the
+# URL query string the way plain redis-py does — it needs to be passed via
+# broker_use_ssl / redis_backend_use_ssl, or the client raises:
+#   "A rediss:// URL must have parameter ssl_cert_reqs and this must be set to
+#    CERT_REQUIRED, CERT_OPTIONAL, or CERT_NONE"
+# the moment it actually needs a connection (e.g. storing a task result).
+_ssl_conf = {}
+if settings.redis_url.startswith("rediss://"):
+    _ssl_conf = {
+        "broker_use_ssl": {"ssl_cert_reqs": ssl.CERT_NONE},
+        "redis_backend_use_ssl": {"ssl_cert_reqs": ssl.CERT_NONE},
+    }
+
 celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
@@ -68,6 +84,7 @@ celery_app.conf.update(
         "workers.intelligence.*": {"queue": "intelligence"},
         "workers.maintenance.*": {"queue": "scoring"},
     },
+    **_ssl_conf,
 )
 
 celery_app.conf.beat_schedule = {
