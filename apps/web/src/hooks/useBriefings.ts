@@ -15,10 +15,17 @@ export interface Briefing {
   title?: string;
 }
 
+interface BriefingsEnvelope {
+  data: Briefing[];
+}
+
 export function useBriefings(limit = 12) {
   return useQuery({
     queryKey: ["briefings", limit],
-    queryFn: () => fetchJson<Briefing[]>("/api/briefings", { limit }),
+    queryFn: async () => {
+      const res = await fetchJson<BriefingsEnvelope>("/api/briefings", { limit });
+      return res?.data ?? [];
+    },
   });
 }
 

@@ -1,39 +1,86 @@
 name: Ingest Cron (free scheduler)
 
 # -----------------------------------------------------------------------------
-# On the Render FREE tier there is no always-on Celery beat. This scheduled
-# GitHub Action acts as the "scheduler": it pings the API's internal ingest
-# trigger on a schedule so new papers/repos get pulled in.
+# On the Render FREE tier there is no always-on Celery beat. These scheduled
+# GitHub Actions act as the "scheduler": they ping the API's internal admin
+# endpoints so ingestion, rescoring, and Layer-3 intelligence actually run.
 #
 # Setup:
 #   1. In the repo Settings -> Secrets and variables -> Actions, add:
 #        API_BASE_URL   e.g. https://ai-research-radar-api.onrender.com
 #        API_SECRET_KEY the same value as the backend SECRET_KEY / API auth key
-#   2. Adjust the cron below (times are UTC).
+#   2. Adjust the cron expressions below (times are UTC).
+#
+# CELERY_EAGER=true on the free tier means every /internal/* call below runs
+# synchronously inside that one HTTP request — expect these to take a while
+# (the weekly Layer-3 job especially). That's expected, not a bug.
 # -----------------------------------------------------------------------------
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # every 6 hours (UTC)
-  workflow_dispatch:         # allow manual runs
+    - cron: "0 */6 * * *"    # every 6 hours (UTC): ingest + enrich/rescoring
+    - cron: "0 3 * * 1"      # weekly, Monday 03:00 UTC: full Layer-3 + briefing
+  workflow_dispatch:          # allow manual runs
 
 jobs:
-  trigger-ingest:
+  ingest-and-enrich:
+    if: github.event.schedule == '0 */6 * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger ingestion
+      - name: Warm the (possibly sleeping) free Render service
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 15 \
+            "${API_BASE_URL}/health" || echo "health warmup failed (continuing)"
+
+      - name: Trigger ingestion (arXiv / HF / GitHub)
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
         run: |
-          set -euo pipefail
-          # Wake the (possibly sleeping) free Render service first.
+          curl -fsS --max-time 300 -X POST \
+            -H "Authorization: Bearer ${API_SECRET_KEY}" \
+            "${API_BASE_URL}/api/v1/internal/ingest/trigger" \
+            && echo "" && echo "ingest triggered" || echo "ingest trigger failed (continuing)"
+
+      - name: Enrich + rescore (citations, affiliations, social, graph edges, daily Layer-3)
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          curl -fsS --max-time 1800 -X POST \
+            -H "Authorization: Bearer ${API_SECRET_KEY}" \
+            "${API_BASE_URL}/api/v1/internal/ingest/enrich" \
+            && echo "" && echo "enrich triggered" || echo "enrich failed/timed out (continuing, safe to retry next run)"
+
+  weekly-intelligence-and-briefing:
+    if: github.event.schedule == '0 3 * * 1' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm the (possibly sleeping) free Render service
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
           curl -fsS --retry 5 --retry-all-errors --retry-delay 15 \
             "${API_BASE_URL}/health" || echo "health warmup failed (continuing)"
 
-          echo "Triggering ingestion..."
-          curl -fsS -X POST \
-            -H "Content-Type: application/json" \
+      - name: Full Layer-3 recompute (propagation, genealogy, cross-pollination, evolution, collaboration, frontier)
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          curl -fsS --max-time 1800 -X POST \
             -H "Authorization: Bearer ${API_SECRET_KEY}" \
-            "${API_BASE_URL}/api/v1/internal/ingest/trigger" \
-            && echo "" && echo "ingest triggered"
+            "${API_BASE_URL}/api/v1/internal/intelligence/recompute" \
+            && echo "" && echo "intelligence recompute triggered" || echo "intelligence recompute failed/timed out (continuing)"
+
+      - name: Generate weekly briefing
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          curl -fsS --max-time 300 -X POST \
+            -H "Authorization: Bearer ${API_SECRET_KEY}" \
+            "${API_BASE_URL}/api/v1/internal/briefing/generate" \
+            && echo "" && echo "briefing generation triggered" || echo "briefing generation failed (continuing)"

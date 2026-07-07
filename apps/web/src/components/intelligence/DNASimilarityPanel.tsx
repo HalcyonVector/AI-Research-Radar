@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/layout/EmptyState";
 
 export function DNASimilarityPanel({ paperId }: { paperId: string }) {
   const { data, isLoading } = useDNASimilar(paperId);
-  const items = data?.data ?? [];
+  const items = data?.matches ?? [];
 
   return (
     <Card>
@@ -34,7 +34,7 @@ export function DNASimilarityPanel({ paperId }: { paperId: string }) {
       ) : (
         <ul className="space-y-2">
           {items.map((item) => {
-            const similarity = Math.max(0, Math.min(100, Math.round((1 - item.distance) * 100)));
+            const similarity = Math.max(0, Math.min(100, Math.round((1 - item.genetic_distance) * 100)));
             return (
               <li key={item.paper.id}>
                 <Link
