@@ -6,6 +6,13 @@
 # 4. exec the passed command (defaults to uvicorn via Dockerfile CMD).
 set -euo pipefail
 
+# Belt-and-suspenders: the Dockerfile also sets this as an image ENV, but set
+# it explicitly here too so it's guaranteed correct at container start time
+# regardless of build-layer caching. Unlike uvicorn (which inserts cwd into
+# sys.path itself when resolving a "module:app" string), alembic does not —
+# without this, `import src...` fails with ModuleNotFoundError.
+export PYTHONPATH="/app:${PYTHONPATH:-}"
+
 log() { echo "[entrypoint] $*"; }
 
 # ---- 1. Wait for Postgres -------------------------------------------------
