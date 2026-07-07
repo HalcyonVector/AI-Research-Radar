@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     hf_api_token: str = ""
     github_token: str = ""
 
+    # OpenAlex (free, no key) — author institutional affiliations per paper.
+    # Setting a contact email moves requests into OpenAlex's faster "polite pool".
+    openalex_mailto: str = ""
+
     # Behaviour
     celery_eager: bool = False  # run tasks synchronously (dev/solo hosting)
     cache_enabled: bool = True

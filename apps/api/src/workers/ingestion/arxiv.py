@@ -7,7 +7,6 @@ from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper, PaperAuthor, PaperCategory
 from src.redis_client import redis_client
-from src.config import settings
 from src.utils.text import normalize_whitespace
 from src.workers.ingestion.common import get_or_create_author, category_for_arxiv
 
@@ -46,7 +45,7 @@ def fetch_recent(category: str, max_results: int = MAX_RESULTS) -> list[dict]:
             "published": e.get("published"),
             "updated": e.get("updated"),
             "authors": [a.get("name") for a in e.get("authors", [])],
-            "pdf_url": next((l.get("href") for l in e.get("links", []) if l.get("type") == "application/pdf"), None),
+            "pdf_url": next((link.get("href") for link in e.get("links", []) if link.get("type") == "application/pdf"), None),
             "html_url": raw_id,
             "categories": [t.get("term") for t in e.get("tags", [])],
             "comment": e.get("arxiv_comment"),

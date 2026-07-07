@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.services.intelligence import (
-    dna_service, breakthrough_service, frontier_service, narrative_service,
+    dna_service, breakthrough_service, frontier_service, narrative_service, talent_service,
 )
 
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
@@ -65,3 +65,8 @@ def evolution(concept: str, db: Session = Depends(get_db)):
 @router.get("/collaborations")
 def collaborations(concept: str | None = None, db: Session = Depends(get_db)):
     return narrative_service.collaborations(db, concept)
+
+
+@router.get("/talent-flow")
+def talent_flow(limit: int = 20, org_id: str | None = None, db: Session = Depends(get_db)):
+    return talent_service.recent_moves(db, limit, org_id)

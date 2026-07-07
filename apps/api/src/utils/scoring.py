@@ -1,6 +1,5 @@
 """Scoring formulas (spec 3.3 + Layer 3 1.4.8.3/1.4.8.8). Pure functions, unit-tested."""
 import math
-from statistics import mean
 
 
 def _norm(value: float, ceiling: float) -> float:
@@ -23,7 +22,7 @@ def momentum_score(citation_history: list[int], age_days: int) -> float:
         return 0.0
     velocities = [citation_history[i] - citation_history[max(i - 7, 0)] for i in range(len(citation_history))]
     # EWMA span=4
-    span, alpha = 4, 2 / (4 + 1)
+    alpha = 2 / (4 + 1)  # EWMA span=4
     ewma = velocities[0]
     for v in velocities[1:]:
         ewma = alpha * v + (1 - alpha) * ewma

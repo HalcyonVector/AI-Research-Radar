@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select, desc, func
 from sqlalchemy.orm import Session, selectinload
-from src.models import Paper, Model, PaperCategory, ResearchCategory, Repository
+from src.models import Paper, Model, ResearchCategory, Repository
 from src.models.intelligence.paper_intelligence_scores import PaperIntelligenceScores
 from src.models import WeeklyReport
 from src.services import serializers as S
@@ -20,7 +20,7 @@ def dashboard(db: Session) -> dict:
         .order_by(desc(PaperIntelligenceScores.emerging_breakthrough_score)).limit(5)
     ).all()
 
-    latest = db.execute(select(WeeklyReport).where(WeeklyReport.is_published == True)
+    latest = db.execute(select(WeeklyReport).where(WeeklyReport.is_published.is_(True))
                         .order_by(desc(WeeklyReport.week_start)).limit(1)).scalar_one_or_none()
 
     # heatmap: papers per category over last 8 weeks

@@ -4,7 +4,7 @@ import networkx as nx
 from sqlalchemy import select
 from src.celery_app import celery_app
 from src.database import session_scope
-from src.models import Paper, PaperAuthor, Author, Organization
+from src.models import Paper, PaperAuthor, Author
 from src.models.intelligence.collaboration_cluster import CollaborationCluster
 
 

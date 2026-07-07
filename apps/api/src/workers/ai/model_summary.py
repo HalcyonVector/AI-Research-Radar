@@ -8,7 +8,6 @@ from src.models import Model
 from src.ai.llm import complete_json, model_name, LLMError
 from src.ai.prompts import MODEL_SUMMARY_PROMPT
 from src.ai.content_fetch import fetch_hf_card
-from src.config import settings
 
 REQUIRED = {"what_it_is", "capabilities", "use_cases", "notable"}
 

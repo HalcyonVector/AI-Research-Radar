@@ -2,7 +2,7 @@
 from sqlalchemy import select
 from src.celery_app import celery_app
 from src.database import session_scope
-from src.models import Paper, Repository, Model, PaperCategory
+from src.models import Paper, Repository, Model
 from src.models.intelligence.paper_concept_composition import PaperConceptComposition
 from src.models.intelligence.evolution_timeline_event import EvolutionTimelineEvent
 

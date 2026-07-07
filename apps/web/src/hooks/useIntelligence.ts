@@ -14,6 +14,7 @@ import type {
   InfluenceResponse,
   FrontierResponse,
   NarrativesResponse,
+  TalentFlowResponse,
 } from "@/types/intelligence";
 
 export function useSleepingGiants(opts?: { limit?: number; category?: string }) {
@@ -112,6 +113,17 @@ export function useNarratives(opts?: { scope?: string; scope_ref?: string; limit
         scope: opts?.scope,
         scope_ref: opts?.scope_ref,
         limit: opts?.limit,
+      }),
+  });
+}
+
+export function useTalentFlow(opts?: { limit?: number; orgId?: string }) {
+  return useQuery({
+    queryKey: ["talent-flow", opts],
+    queryFn: () =>
+      fetchJson<TalentFlowResponse>("/api/intelligence/talent-flow", {
+        limit: opts?.limit,
+        org_id: opts?.orgId,
       }),
   });
 }

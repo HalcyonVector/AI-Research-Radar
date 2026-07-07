@@ -1,6 +1,5 @@
 """Model popularity/growth scoring (spec 1.4.4)."""
 import math
-from datetime import date, timedelta
 from sqlalchemy import select
 from src.celery_app import celery_app
 from src.database import session_scope

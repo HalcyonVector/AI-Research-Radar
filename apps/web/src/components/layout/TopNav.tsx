@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCommandPalette } from "@/components/providers/CommandPaletteProvider";
-import { useDemoStore } from "@/stores/demo";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -21,7 +20,6 @@ const NAV = [
 export function TopNav() {
   const pathname = usePathname();
   const { setOpen } = useCommandPalette();
-  const demo = useDemoStore((s) => s.demo);
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
@@ -53,19 +51,10 @@ export function TopNav() {
           ))}
         </nav>
 
-        {demo ? (
-          <span
-            title="Backend unreachable — showing sample data."
-            className="hidden shrink-0 border border-[var(--rule-strong)] px-2 py-1 text-[10px] uppercase tracking-widest text-[var(--text-secondary)] sm:inline-block"
-          >
-            Demo data
-          </span>
-        ) : (
-          <span className="hidden shrink-0 items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--text-secondary)] sm:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-primary)]" />
-            Live
-          </span>
-        )}
+        <span className="hidden shrink-0 items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--text-secondary)] sm:flex">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-primary)]" />
+          Live
+        </span>
 
         <button
           onClick={() => setOpen(true)}

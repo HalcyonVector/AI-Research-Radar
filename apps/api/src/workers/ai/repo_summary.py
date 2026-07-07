@@ -8,7 +8,6 @@ from src.models import Repository
 from src.ai.llm import complete_json, model_name, LLMError
 from src.ai.prompts import REPO_SUMMARY_PROMPT
 from src.ai.content_fetch import fetch_github_readme
-from src.config import settings
 
 REQUIRED = {"what_it_does", "key_features", "use_cases", "notable"}
 

@@ -1,12 +1,10 @@
 "use client";
 
-import { Search, Command, FlaskConical } from "lucide-react";
+import { Search, Command } from "lucide-react";
 import { useCommandPalette } from "@/components/providers/CommandPaletteProvider";
-import { useDemoStore } from "@/stores/demo";
 
 export function TopBar() {
   const { setOpen } = useCommandPalette();
-  const demo = useDemoStore((s) => s.demo);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[var(--glass-border)] bg-[rgba(7,7,12,0.6)] px-4 backdrop-blur-xl sm:px-6">
@@ -29,20 +27,10 @@ export function TopBar() {
       </button>
 
       <div className="flex items-center gap-2">
-        {demo ? (
-          <div
-            title="The backend is unreachable — showing realistic sample data."
-            className="flex items-center gap-1.5 rounded-full border border-[#f59e0b55] bg-[#f59e0b1a] px-2.5 py-1"
-          >
-            <FlaskConical size={12} className="text-[#f59e0b]" />
-            <span className="text-[11px] font-medium text-[#f59e0b]">Demo data</span>
-          </div>
-        ) : (
-          <div className="hidden items-center gap-1.5 rounded-full border border-[var(--border-base)] bg-[var(--bg-surface)] px-2.5 py-1 sm:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-            <span className="text-[11px] text-[var(--text-secondary)]">Live</span>
-          </div>
-        )}
+        <div className="hidden items-center gap-1.5 rounded-full border border-[var(--border-base)] bg-[var(--bg-surface)] px-2.5 py-1 sm:flex">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+          <span className="text-[11px] text-[var(--text-secondary)]">Live</span>
+        </div>
         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-hover)]" />
       </div>
     </header>

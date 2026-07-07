@@ -1,5 +1,5 @@
 """Hugging Face model ingestion (spec 5.3)."""
-from datetime import datetime, timezone, date
+from datetime import date
 import requests
 from sqlalchemy import select
 from src.celery_app import celery_app

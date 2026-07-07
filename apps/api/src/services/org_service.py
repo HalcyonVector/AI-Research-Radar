@@ -1,5 +1,5 @@
 """Organization profile service (feature: organization pages)."""
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, desc
 from sqlalchemy.orm import Session, selectinload
 
 from src.models import Author, Organization, Paper, PaperAuthor
