@@ -18,6 +18,7 @@ const ENTRIES = [
   { href: "/intelligence/frontier", title: "Frontier Predictor", desc: "Where the next explosion is likely" },
   { href: "/intelligence/collaborations", title: "Collaboration Clusters", desc: "Which orgs are converging" },
   { href: "/intelligence/talent-flow", title: "Talent Flow", desc: "Researchers moving between organizations" },
+  { href: "/intelligence/lab-scorecard", title: "Lab Scorecard", desc: "Labs ranked by output, impact, and momentum" },
   { href: "/intelligence/propagation/paper-1", title: "Idea Propagation", desc: "How an idea spread across the ecosystem" },
   { href: "/intelligence/genealogy/paper-1", title: "Genealogy", desc: "The lineage of an idea" },
   { href: "/intelligence/dna/paper-1", title: "Research DNA", desc: "The conceptual makeup of a paper" },
