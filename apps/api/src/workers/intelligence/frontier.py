@@ -48,8 +48,10 @@ def train_and_score_frontier_predictor(horizon_weeks: int = 24):
                 prob = float(model.predict_proba(np.array([feats]))[0][1])
                 weights = model.coef_[0]
             else:
-                # heuristic fallback: normalize momentum+velocity
-                prob = min((feats[1] / 100 * 0.5 + min(feats[0] / 100, 1) * 0.5), 1.0)
+                # heuristic fallback: normalize momentum+velocity (clamped to a valid
+                # probability — momentum_score can be negative, which without a floor
+                # produced explosion_probability values below 0).
+                prob = max(0.0, min((feats[1] / 100 * 0.5 + min(feats[0] / 100, 1) * 0.5), 1.0))
                 weights = [0.3, 0.4, 0.2, 0.1]
             ranked = sorted(zip(SIGNAL_NAMES, [abs(float(w)) for w in weights]), key=lambda x: x[1], reverse=True)[:3]
             db.add(FrontierPrediction(category_id=c.id, explosion_probability=round(prob, 3),
