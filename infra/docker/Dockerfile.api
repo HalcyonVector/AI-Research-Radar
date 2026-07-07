@@ -29,7 +29,12 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     # Cache sentence-transformers / HF models in a writable, mountable location
     HF_HOME=/app/.cache/huggingface \
-    SENTENCE_TRANSFORMERS_HOME=/app/.cache/huggingface
+    SENTENCE_TRANSFORMERS_HOME=/app/.cache/huggingface \
+    # Unlike uvicorn (which inserts cwd into sys.path itself when resolving an
+    # "module:app" string), neither alembic nor celery do this automatically —
+    # without this, `import src...` fails with ModuleNotFoundError the moment
+    # anything but uvicorn tries to import the app package from this WORKDIR.
+    PYTHONPATH=/app
 
 # libpq for psycopg runtime; curl for container healthchecks.
 RUN apt-get update && apt-get install -y --no-install-recommends \

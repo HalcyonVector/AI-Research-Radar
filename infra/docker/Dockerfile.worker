@@ -26,7 +26,10 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     HF_HOME=/app/.cache/huggingface \
-    SENTENCE_TRANSFORMERS_HOME=/app/.cache/huggingface
+    SENTENCE_TRANSFORMERS_HOME=/app/.cache/huggingface \
+    # celery (unlike uvicorn) doesn't insert cwd into sys.path itself, so
+    # `import src...` would fail with ModuleNotFoundError without this.
+    PYTHONPATH=/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
