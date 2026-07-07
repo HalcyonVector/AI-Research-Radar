@@ -17,10 +17,9 @@ export interface Model {
 
 export interface ModelHistoryPoint {
   recorded_at: string;
-  downloads: number;
+  downloads_total: number;
+  downloads_7d: number;
   likes: number;
-  growth_score: number;
-  popularity_score: number;
 }
 
 export interface ModelListResponse {

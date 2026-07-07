@@ -65,9 +65,9 @@ export function DownloadChart({ modelId }: DownloadChartProps) {
       ) : (
         <Tabs defaultValue="downloads">
           <TabsList className="mb-4">
-            <TabsTrigger value="downloads">Downloads</TabsTrigger>
+            <TabsTrigger value="downloads">Total Downloads</TabsTrigger>
             <TabsTrigger value="likes">Likes</TabsTrigger>
-            <TabsTrigger value="growth">Growth</TabsTrigger>
+            <TabsTrigger value="growth">Weekly Downloads</TabsTrigger>
           </TabsList>
 
           <TabsContent value="downloads">
@@ -85,7 +85,7 @@ export function DownloadChart({ modelId }: DownloadChartProps) {
                 <Tooltip {...tooltipStyle} labelFormatter={formatX} formatter={(v: number) => [formatCompact(v), "Downloads"]} />
                 <Area
                   type="monotone"
-                  dataKey="downloads"
+                  dataKey="downloads_total"
                   stroke="#6366f1"
                   strokeWidth={2}
                   fill="url(#dl-grad)"
@@ -123,21 +123,13 @@ export function DownloadChart({ modelId }: DownloadChartProps) {
               <LineChart data={history} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="var(--border-base)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="recorded_at" tickFormatter={formatX} {...axisProps} />
-                <YAxis domain={[0, 100]} width={44} {...axisProps} />
-                <Tooltip {...tooltipStyle} labelFormatter={formatX} />
+                <YAxis tickFormatter={formatCompact} width={44} {...axisProps} />
+                <Tooltip {...tooltipStyle} labelFormatter={formatX} formatter={(v: number) => [formatCompact(v), "Downloads (7d)"]} />
                 <Line
                   type="monotone"
-                  dataKey="growth_score"
-                  name="Growth"
+                  dataKey="downloads_7d"
+                  name="Downloads (7d)"
                   stroke="#22c55e"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="popularity_score"
-                  name="Popularity"
-                  stroke="#3b82f6"
                   strokeWidth={2}
                   dot={false}
                 />

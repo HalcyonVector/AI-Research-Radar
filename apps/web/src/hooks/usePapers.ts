@@ -19,6 +19,10 @@ export interface PapersParams {
   limit?: number;
 }
 
+interface DataEnvelope<T> {
+  data: T;
+}
+
 export function usePapers(params: PapersParams) {
   return useInfiniteQuery({
     queryKey: ["papers", params],
@@ -46,7 +50,10 @@ export function usePaper(id: string) {
 export function useRelatedPapers(id: string) {
   return useQuery({
     queryKey: ["paper-related", id],
-    queryFn: () => fetchJson<Paper[]>(`/api/papers/${id}/related`),
+    queryFn: async () => {
+      const res = await fetchJson<DataEnvelope<Paper[]>>(`/api/papers/${id}/related`);
+      return res?.data ?? [];
+    },
     enabled: !!id,
   });
 }
@@ -54,7 +61,10 @@ export function useRelatedPapers(id: string) {
 export function usePaperMetricsHistory(id: string) {
   return useQuery({
     queryKey: ["paper-metrics-history", id],
-    queryFn: () => fetchJson<MetricsHistoryPoint[]>(`/api/papers/${id}/metrics/history`),
+    queryFn: async () => {
+      const res = await fetchJson<DataEnvelope<MetricsHistoryPoint[]>>(`/api/papers/${id}/metrics/history`);
+      return res?.data ?? [];
+    },
     enabled: !!id,
   });
 }

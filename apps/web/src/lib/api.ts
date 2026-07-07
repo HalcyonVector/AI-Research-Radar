@@ -6,6 +6,7 @@
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:8000";
 const API_SECRET_KEY = process.env.API_SECRET_KEY || "";
 const API_PREFIX = "/api/v1";
+const DEFAULT_TIMEOUT_MS = 8000;
 
 export interface UpstreamError {
   error: true;
@@ -27,6 +28,9 @@ interface FetchOptions {
   searchParams?: Record<string, string | number | boolean | undefined | null>;
   body?: unknown;
   revalidate?: number;
+  /** Override the default 8s upstream timeout — some routes (e.g. search, which
+   * may cold-load a local embedding model on first call) legitimately need longer. */
+  timeoutMs?: number;
 }
 
 function buildUrl(path: string, searchParams?: FetchOptions["searchParams"]): string {
@@ -56,7 +60,7 @@ export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promis
   let res: Response;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
     res = await fetch(url, {
       method: opts.method || "GET",
       headers,

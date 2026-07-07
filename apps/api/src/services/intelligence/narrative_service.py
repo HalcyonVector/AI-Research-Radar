@@ -1,7 +1,7 @@
 """Research narratives + chain reads (spec 1.4.8.10, .1, .2, .4, .6, .7)."""
 from sqlalchemy import select, desc
 from sqlalchemy.orm import Session
-from src.models import Paper, Organization
+from src.models import Paper, Organization, Model, Repository
 from src.models.intelligence.research_narrative import ResearchNarrative
 from src.models.intelligence.evolution_timeline_event import EvolutionTimelineEvent
 from src.models.intelligence.collaboration_cluster import CollaborationCluster
@@ -45,11 +45,26 @@ def propagation(db: Session, seed_id: str, seed_type="paper") -> dict:
     return {"seed": {"type": seed_type, "label": label}, "chain": steps}
 
 
+def _entity_label(db: Session, entity_type: str, entity_id) -> str:
+    """Best-effort human-readable label for an evolution-timeline entity."""
+    if entity_type == "paper":
+        p = db.get(Paper, entity_id)
+        return p.title if p else str(entity_id)
+    if entity_type == "model":
+        m = db.get(Model, entity_id)
+        return m.name if m else str(entity_id)
+    if entity_type == "repo":
+        r = db.get(Repository, entity_id)
+        return r.name if r else str(entity_id)
+    return str(entity_id)
+
+
 def evolution(db: Session, concept: str) -> dict:
     rows = db.execute(select(EvolutionTimelineEvent).where(EvolutionTimelineEvent.seed_concept == concept)
                       .order_by(EvolutionTimelineEvent.occurred_at)).scalars().all()
     return {"concept": concept, "stages": [{"stage": r.stage, "entity_type": r.entity_type,
-            "entity_id": str(r.entity_id), "occurred_at": r.occurred_at.isoformat()} for r in rows]}
+            "entity_id": str(r.entity_id), "label": _entity_label(db, r.entity_type, r.entity_id),
+            "occurred_at": r.occurred_at.isoformat()} for r in rows]}
 
 
 def collaborations(db: Session, concept=None) -> dict:
@@ -59,10 +74,10 @@ def collaborations(db: Session, concept=None) -> dict:
     rows = db.execute(stmt.order_by(desc(CollaborationCluster.cohesion_score))).scalars().all()
     out = []
     for c in rows:
-        members = [{"id": str(oid), "name": (db.get(Organization, oid).name if db.get(Organization, oid) else "org")}
-                   for oid in (c.member_org_ids or [])]
+        member_orgs = [{"id": str(oid), "name": (db.get(Organization, oid).name if db.get(Organization, oid) else "org")}
+                       for oid in (c.member_org_ids or [])]
         out.append({"id": str(c.id), "cohesion_score": round(c.cohesion_score, 3),
-                    "formed_around_concept": c.formed_around_concept, "members": members})
+                    "formed_around_concept": c.formed_around_concept, "member_orgs": member_orgs})
     return {"data": out}
 
 
@@ -72,7 +87,7 @@ def cross_pollination(db: Session, concept: str) -> dict:
         KnowledgeGraphEdge.properties["concept"].astext == concept,
     )).scalars().all()
     steps = sorted(({"category": (e.properties or {}).get("category"),
-                     "arrival_date": (e.properties or {}).get("arrival_date"),
+                     "date": (e.properties or {}).get("arrival_date"),
                      "step": (e.properties or {}).get("step", i)} for i, e in enumerate(edges)),
                    key=lambda x: x["step"])
     return {"concept": concept, "chain": steps}
@@ -89,7 +104,7 @@ def genealogy(db: Session, paper_id: str, depth=5) -> dict:
             KnowledgeGraphEdge.target_id == pid,
         ).limit(6)).scalars().all()
         children = [c for c in (build(e.source_id, d - 1) for e in children_edges) if c]
-        return {"id": str(node.id), "title": node.title, "arxiv_id": node.arxiv_id,
-                "published_at": node.published_at.isoformat() if node.published_at else None,
+        return {"id": str(node.id), "label": node.title,
+                "date": node.published_at.isoformat() if node.published_at else None,
                 "children": children}
-    return {"tree": build(paper_id, depth)}
+    return {"root": build(paper_id, depth)}

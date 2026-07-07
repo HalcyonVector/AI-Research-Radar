@@ -47,6 +47,7 @@ def model_item(m) -> dict:
     return {
         "id": str(m.id), "hf_model_id": m.hf_model_id, "name": m.name,
         "model_type": m.model_type, "downloads_7d": m.downloads_7d,
+        "downloads_30d": m.downloads_30d,
         "downloads_total": m.downloads_total, "likes": m.likes,
         "growth_score": m.growth_score, "popularity_score": m.popularity_score,
         "linked_paper_id": str(m.linked_paper_id) if m.linked_paper_id else None,
