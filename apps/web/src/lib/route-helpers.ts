@@ -9,7 +9,8 @@ import { safeApiFetch } from "./api";
 export async function proxyGet(
   req: NextRequest,
   upstreamPath: string,
-  allowedParams: string[] = []
+  allowedParams: string[] = [],
+  opts: { timeoutMs?: number } = {}
 ): Promise<NextResponse> {
   const searchParams: Record<string, string> = {};
   const incoming = req.nextUrl.searchParams;
@@ -24,7 +25,7 @@ export async function proxyGet(
     }
   }
 
-  const result = await safeApiFetch<unknown>(upstreamPath, { searchParams });
+  const result = await safeApiFetch<unknown>(upstreamPath, { searchParams, timeoutMs: opts.timeoutMs });
   if ("error" in result) {
     return NextResponse.json(result.error, { status: result.status });
   }
