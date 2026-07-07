@@ -28,7 +28,7 @@ build/
 
 # ---- ML model / HF caches ----
 .cache/
-models/
+/models/
 *.gguf
 .huggingface/
 sentence_transformers/
