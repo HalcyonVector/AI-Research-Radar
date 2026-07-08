@@ -43,6 +43,17 @@ def ingest_enrich():
                                           "graph_edges", "intelligence_daily"]}
 
 
+@router.post("/categories/backfill")
+def categories_backfill():
+    """Recompute primary_category for existing papers with the current
+    category_for_arxiv() logic (fixes e.g. Multi-Agent Systems / MCP Ecosystem
+    / Reinforcement Learning papers mis-filed before that logic existed).
+    Runs synchronously under CELERY_EAGER - expect this to take a while for a
+    large corpus; safe to re-trigger if the request times out client-side."""
+    from src.workers.maintenance import backfill_categories
+    return backfill_categories.run()
+
+
 @router.post("/scores/recompute")
 def scores_recompute():
     from src.workers.scoring import paper_scores, trend_scores

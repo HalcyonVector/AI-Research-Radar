@@ -33,6 +33,7 @@ TASK_MODULES = [
     "src.workers.intelligence.narrative",
     "src.workers.intelligence.orchestrate",
     "src.workers.intelligence.propagation",
+    "src.workers.maintenance.backfill_categories",
     "src.workers.maintenance.cleanup",
     "src.workers.maintenance.refresh_views",
     "src.workers.scoring.model_scores",
