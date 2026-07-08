@@ -13,6 +13,7 @@ import {
   Plug,
   Sparkles,
   ClipboardCheck,
+  Network,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,21 +24,27 @@ export interface CategoryDef {
   icon: LucideIcon;
 }
 
+// Slugs/names/colors must match the real backend-seeded ResearchCategory rows
+// (see infra/scripts/seed_categories.py) — this list previously used made-up
+// slugs like "reasoning"/"agents"/"coding" that matched nothing, silently
+// breaking category-seeded features (Graph page, search filters) for 12 of 14
+// categories even though the categories themselves had plenty of real data.
 export const CATEGORIES: CategoryDef[] = [
   { slug: "llms", name: "LLMs", color: "#6366f1", icon: Brain },
-  { slug: "agents", name: "Agents", color: "#f59e0b", icon: Bot },
-  { slug: "reasoning", name: "Reasoning", color: "#10b981", icon: Lightbulb },
-  { slug: "vision", name: "Vision", color: "#3b82f6", icon: Eye },
-  { slug: "multimodal", name: "Multimodal", color: "#8b5cf6", icon: Layers },
+  { slug: "reasoning-models", name: "Reasoning Models", color: "#10b981", icon: Lightbulb },
+  { slug: "ai-agents", name: "AI Agents", color: "#f59e0b", icon: Bot },
+  { slug: "coding-agents", name: "Coding Agents", color: "#84cc16", icon: Code2 },
   { slug: "robotics", name: "Robotics", color: "#ef4444", icon: Cpu },
-  { slug: "rl", name: "Reinforcement Learning", color: "#ec4899", icon: Gamepad2 },
-  { slug: "infra", name: "Infrastructure", color: "#6b7280", icon: Server },
-  { slug: "rag", name: "RAG", color: "#14b8a6", icon: Database },
-  { slug: "speech", name: "Speech", color: "#f97316", icon: Mic },
-  { slug: "coding", name: "Coding", color: "#84cc16", icon: Code2 },
-  { slug: "mcp", name: "MCP", color: "#a78bfa", icon: Plug },
-  { slug: "synth", name: "Synthetic Data", color: "#06b6d4", icon: Sparkles },
-  { slug: "evals", name: "Evals", color: "#fbbf24", icon: ClipboardCheck },
+  { slug: "computer-vision", name: "Computer Vision", color: "#3b82f6", icon: Eye },
+  { slug: "speech-ai", name: "Speech AI", color: "#f97316", icon: Mic },
+  { slug: "ai-infrastructure", name: "AI Infrastructure", color: "#6b7280", icon: Server },
+  { slug: "rag-systems", name: "RAG Systems", color: "#14b8a6", icon: Database },
+  { slug: "multi-agent-systems", name: "Multi-Agent Systems", color: "#eab308", icon: Network },
+  { slug: "multimodal-ai", name: "Multimodal AI", color: "#8b5cf6", icon: Layers },
+  { slug: "reinforcement-learning", name: "Reinforcement Learning", color: "#ec4899", icon: Gamepad2 },
+  { slug: "synthetic-data", name: "Synthetic Data", color: "#06b6d4", icon: Sparkles },
+  { slug: "mcp-ecosystem", name: "MCP Ecosystem", color: "#a78bfa", icon: Plug },
+  { slug: "evaluation-frameworks", name: "Evaluation Frameworks", color: "#fbbf24", icon: ClipboardCheck },
 ];
 
 export const CATEGORY_MAP: Record<string, CategoryDef> = Object.fromEntries(

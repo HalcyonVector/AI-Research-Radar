@@ -72,118 +72,120 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
           : "Papers published per category, by week"}
       </p>
 
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Skeleton className="h-3 w-20 shrink-0" />
-              <div className="flex gap-[3px]">
-                {Array.from({ length: MAX_DATES }).map((__, j) => (
-                  <Skeleton key={j} className="h-[14px] w-[14px] rounded-sm" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : dates.length === 0 ? (
-        <EmptyState
-          icon={Activity}
-          title="No activity data"
-          description="Category activity will render here as papers are indexed."
-          compact
-        />
-      ) : isBarView ? (
-        <div className="space-y-2.5">
-          {categories.map((cat) => {
-            const count = rowTotal.get(cat.slug) ?? 0;
-            const widthPct = count > 0 ? Math.max(4, (count / barMax) * 100) : 0;
-            return (
-              <div key={cat.slug} className="flex items-center gap-3">
-                <span className="w-32 shrink-0 truncate text-[11px] text-[var(--text-tertiary)]">
-                  {cat.name}
-                </span>
-                <div className="h-5 flex-1 rounded-sm bg-[var(--bg-elevated)]">
-                  <div
-                    className="h-full rounded-sm transition-[width]"
-                    style={{ width: `${widthPct}%`, backgroundColor: cat.color }}
-                  />
+      <div className="flex flex-1 flex-col justify-center">
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Skeleton className="h-3 w-20 shrink-0" />
+                <div className="flex gap-[3px]">
+                  {Array.from({ length: MAX_DATES }).map((__, j) => (
+                    <Skeleton key={j} className="h-[14px] w-[14px] rounded-sm" />
+                  ))}
                 </div>
-                <span className="w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-[var(--text-secondary)]">
-                  {count}
-                </span>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <div className="inline-block min-w-full">
-            <div className="flex items-center gap-3 pb-1.5">
-              <span className="w-32 shrink-0" style={{ width: LABEL_COL_WIDTH }} />
-              <div className="flex flex-1 gap-1.5">
-                {dates.map((date) => (
-                  <span
-                    key={date}
-                    className="flex-1 truncate text-center text-[10px] text-[var(--text-tertiary)]"
-                  >
-                    {formatDateShort(date)}
-                  </span>
-                ))}
-              </div>
-            </div>
-
+            ))}
+          </div>
+        ) : dates.length === 0 ? (
+          <EmptyState
+            icon={Activity}
+            title="No activity data"
+            description="Category activity will render here as papers are indexed."
+            compact
+          />
+        ) : isBarView ? (
+          <div className="space-y-2.5">
             {categories.map((cat) => {
-              const max = rowMax.get(cat.slug) ?? 0;
+              const count = rowTotal.get(cat.slug) ?? 0;
+              const widthPct = count > 0 ? Math.max(4, (count / barMax) * 100) : 0;
               return (
-                <div key={cat.slug} className="flex items-center gap-3 py-[3px]">
-                  <span
-                    className="shrink-0 truncate text-[11px] text-[var(--text-tertiary)]"
-                    style={{ width: LABEL_COL_WIDTH }}
-                  >
+                <div key={cat.slug} className="flex items-center gap-3">
+                  <span className="w-32 shrink-0 truncate text-[11px] text-[var(--text-tertiary)]">
                     {cat.name}
                   </span>
-                  <div className="flex flex-1 gap-1.5">
-                    {dates.map((date) => {
-                      const count = lookup.get(`${cat.slug}|${date}`) ?? 0;
-                      // Log scale within the row's own range so a single busy week
-                      // doesn't compress every other non-zero cell toward the floor.
-                      const intensity =
-                        max > 0 ? Math.log1p(count) / Math.log1p(max) : 0;
-                      const opacity = count > 0 ? 0.22 + intensity * 0.78 : 0;
-                      return (
-                        <div
-                          key={date}
-                          className="h-6 flex-1 rounded-sm border border-[var(--border-base)]"
-                          style={{
-                            backgroundColor:
-                              count > 0 ? cat.color : "var(--bg-elevated)",
-                            opacity: count > 0 ? opacity : 1,
-                          }}
-                          title={`${cat.name} · ${formatDateShort(date)} · ${count} papers`}
-                        />
-                      );
-                    })}
+                  <div className="h-5 flex-1 rounded-sm bg-[var(--bg-elevated)]">
+                    <div
+                      className="h-full rounded-sm transition-[width]"
+                      style={{ width: `${widthPct}%`, backgroundColor: cat.color }}
+                    />
                   </div>
+                  <span className="w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-[var(--text-secondary)]">
+                    {count}
+                  </span>
                 </div>
               );
             })}
-            <div
-              className="mt-3 flex items-center gap-2 text-[10px] text-[var(--text-tertiary)]"
-              style={{ paddingLeft: LABEL_COL_WIDTH + 12 }}
-            >
-              <span>Fewer papers</span>
-              {[0.25, 0.5, 0.75, 1].map((o, i) => (
-                <div
-                  key={i}
-                  className="h-[12px] w-[12px] rounded-sm bg-[var(--text-primary)]"
-                  style={{ opacity: o }}
-                />
-              ))}
-              <span>More papers (relative to that category's busiest week shown)</span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="inline-block min-w-full">
+              <div className="flex items-center gap-3 pb-1.5">
+                <span className="w-32 shrink-0" style={{ width: LABEL_COL_WIDTH }} />
+                <div className="flex flex-1 gap-1.5">
+                  {dates.map((date) => (
+                    <span
+                      key={date}
+                      className="flex-1 truncate text-center text-[10px] text-[var(--text-tertiary)]"
+                    >
+                      {formatDateShort(date)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {categories.map((cat) => {
+                const max = rowMax.get(cat.slug) ?? 0;
+                return (
+                  <div key={cat.slug} className="flex items-center gap-3 py-[3px]">
+                    <span
+                      className="shrink-0 truncate text-[11px] text-[var(--text-tertiary)]"
+                      style={{ width: LABEL_COL_WIDTH }}
+                    >
+                      {cat.name}
+                    </span>
+                    <div className="flex flex-1 gap-1.5">
+                      {dates.map((date) => {
+                        const count = lookup.get(`${cat.slug}|${date}`) ?? 0;
+                        // Log scale within the row's own range so a single busy week
+                        // doesn't compress every other non-zero cell toward the floor.
+                        const intensity =
+                          max > 0 ? Math.log1p(count) / Math.log1p(max) : 0;
+                        const opacity = count > 0 ? 0.22 + intensity * 0.78 : 0;
+                        return (
+                          <div
+                            key={date}
+                            className="h-6 flex-1 rounded-sm border border-[var(--border-base)]"
+                            style={{
+                              backgroundColor:
+                                count > 0 ? cat.color : "var(--bg-elevated)",
+                              opacity: count > 0 ? opacity : 1,
+                            }}
+                            title={`${cat.name} · ${formatDateShort(date)} · ${count} papers`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              <div
+                className="mt-3 flex items-center gap-2 text-[10px] text-[var(--text-tertiary)]"
+                style={{ paddingLeft: LABEL_COL_WIDTH + 12 }}
+              >
+                <span>Fewer papers</span>
+                {[0.25, 0.5, 0.75, 1].map((o, i) => (
+                  <div
+                    key={i}
+                    className="h-[12px] w-[12px] rounded-sm bg-[var(--text-primary)]"
+                    style={{ opacity: o }}
+                  />
+                ))}
+                <span>More papers (relative to that category's busiest week shown)</span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </Card>
   );
 }

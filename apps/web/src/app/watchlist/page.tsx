@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { PaperCard } from "@/components/papers/PaperCard";
 import {
   useWatches,
@@ -20,7 +21,7 @@ import { formatDate } from "@/lib/formatters";
 import type { Watch } from "@/types/paper";
 
 function BookmarksSection() {
-  const { data, isLoading } = useBookmarks();
+  const { data, isLoading, isError, refetch } = useBookmarks();
   const remove = useDeleteBookmark();
   const bookmarks = data?.data ?? [];
 
@@ -33,6 +34,8 @@ function BookmarksSection() {
             <Skeleton key={i} className="h-12 w-full" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : bookmarks.length === 0 ? (
         <EmptyState
           title="No bookmarks yet"
@@ -68,7 +71,7 @@ function BookmarksSection() {
 
 function DigestExpander({ watchId }: { watchId: string }) {
   const [open, setOpen] = useState(false);
-  const { data, isLoading } = useWatchDigest(watchId, open);
+  const { data, isLoading, isError, refetch } = useWatchDigest(watchId, open);
   const papers = data?.data ?? [];
 
   return (
@@ -88,6 +91,8 @@ function DigestExpander({ watchId }: { watchId: string }) {
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
+          ) : isError ? (
+            <ErrorState compact onRetry={() => refetch()} />
           ) : papers.length === 0 ? (
             <p className="text-xs text-[var(--text-tertiary)]">Nothing new in this digest.</p>
           ) : (
@@ -138,7 +143,7 @@ function WatchRow({ watch }: { watch: Watch }) {
 }
 
 function WatchesSection() {
-  const { data, isLoading } = useWatches();
+  const { data, isLoading, isError, refetch } = useWatches();
   const create = useCreateWatch();
   const watches = data?.data ?? [];
 
@@ -228,6 +233,8 @@ function WatchesSection() {
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : watches.length === 0 ? (
         <EmptyState
           title="No watches yet"

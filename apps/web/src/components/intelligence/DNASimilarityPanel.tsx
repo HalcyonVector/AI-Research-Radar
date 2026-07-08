@@ -6,9 +6,10 @@ import { useDNASimilar } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 
 export function DNASimilarityPanel({ paperId }: { paperId: string }) {
-  const { data, isLoading } = useDNASimilar(paperId);
+  const { data, isLoading, isError, refetch } = useDNASimilar(paperId);
   const items = data?.matches ?? [];
 
   return (
@@ -29,6 +30,8 @@ export function DNASimilarityPanel({ paperId }: { paperId: string }) {
             <Skeleton key={i} className="h-12 w-full rounded-lg" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : items.length === 0 ? (
         <EmptyState compact title="No similar papers" description="DNA similarity hasn't been computed for this paper." />
       ) : (

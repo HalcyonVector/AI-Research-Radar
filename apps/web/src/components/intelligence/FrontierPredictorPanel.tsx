@@ -6,6 +6,7 @@ import { useFrontier } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { formatPercent } from "@/lib/formatters";
 import type { FrontierPrediction } from "@/types/intelligence";
@@ -53,7 +54,7 @@ function PredictionRow({ pred }: { pred: FrontierPrediction }) {
 }
 
 export function FrontierPredictorPanel({ limit }: { limit?: number }) {
-  const { data, isLoading } = useFrontier();
+  const { data, isLoading, isError, refetch } = useFrontier();
   const preds = (data?.data ?? []).slice(0, limit ?? 8);
 
   return (
@@ -79,6 +80,8 @@ export function FrontierPredictorPanel({ limit }: { limit?: number }) {
             <Skeleton key={i} className="h-20 w-full rounded-lg" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : preds.length === 0 ? (
         <EmptyState icon={Radio} compact title="No predictions" description="Frontier signals are still being computed." />
       ) : (

@@ -13,5 +13,5 @@ export async function GET(req: NextRequest) {
     "has_summary",
     "cursor",
     "limit",
-  ]);
+  ], { timeoutMs: 20000 });
 }

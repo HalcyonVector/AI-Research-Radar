@@ -5,6 +5,7 @@ import { usePropagation } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { formatDate } from "@/lib/formatters";
 import type { PropagationStep } from "@/types/intelligence";
 
@@ -44,7 +45,7 @@ function Step({ step, last }: { step: PropagationStep; last: boolean }) {
 }
 
 export function PropagationChain({ seedId }: { seedId: string }) {
-  const { data, isLoading } = usePropagation(seedId);
+  const { data, isLoading, isError, refetch } = usePropagation(seedId);
   const chain = data?.chain ?? [];
 
   return (
@@ -67,6 +68,8 @@ export function PropagationChain({ seedId }: { seedId: string }) {
             </div>
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : chain.length === 0 ? (
         <EmptyState compact title="No propagation trail" description="We haven't traced downstream adoption for this seed yet." />
       ) : (

@@ -4,5 +4,5 @@ import { proxyGet } from "@/lib/route-helpers";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  return proxyGet(req, `/watches/${encodeURIComponent(params.id)}/digest`, []);
+  return proxyGet(req, `/watches/${encodeURIComponent(params.id)}/digest`, [], { timeoutMs: 20000 });
 }

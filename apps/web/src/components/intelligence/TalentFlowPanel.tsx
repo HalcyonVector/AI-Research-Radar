@@ -6,6 +6,7 @@ import { useTalentFlow } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import type { TalentMove } from "@/types/intelligence";
 
 function formatDate(iso: string | null) {
@@ -46,7 +47,7 @@ function MoveRow({ move }: { move: TalentMove }) {
 }
 
 export function TalentFlowPanel({ limit = 20, orgId }: { limit?: number; orgId?: string }) {
-  const { data, isLoading } = useTalentFlow({ limit, orgId });
+  const { data, isLoading, isError, refetch } = useTalentFlow({ limit, orgId });
   const moves = data?.data ?? [];
 
   return (
@@ -67,6 +68,8 @@ export function TalentFlowPanel({ limit = 20, orgId }: { limit?: number; orgId?:
             <Skeleton key={i} className="h-20 w-full rounded-xl" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : moves.length === 0 ? (
         <EmptyState
           icon={UserRoundSearch}

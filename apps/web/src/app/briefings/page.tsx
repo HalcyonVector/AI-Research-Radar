@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { formatDate } from "@/lib/formatters";
 import type { Briefing } from "@/hooks/useBriefings";
 
@@ -26,7 +27,7 @@ function Stat({ icon: Icon, value, label }: { icon: typeof FileText; value: numb
 
 export default function BriefingsPage() {
   const { data: latest } = useLatestBriefing();
-  const { data, isLoading } = useBriefings();
+  const { data, isLoading, isError, refetch } = useBriefings();
   const briefings = data ?? [];
 
   return (
@@ -68,6 +69,8 @@ export default function BriefingsPage() {
             <Skeleton key={i} className="h-36 w-full rounded-xl" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : briefings.length === 0 ? (
         <EmptyState icon={Newspaper} title="No briefings yet" description="Weekly briefings will appear here as they are generated." />
       ) : (
