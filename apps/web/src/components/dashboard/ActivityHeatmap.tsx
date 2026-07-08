@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { CATEGORIES, getCategory } from "@/lib/constants";
-import { formatDateShort, prettifySlug } from "@/lib/formatters";
+import { formatDate, formatDateShort, prettifySlug } from "@/lib/formatters";
 
 interface HeatmapCell {
   category_slug: string;
@@ -21,6 +21,7 @@ interface ActivityHeatmapProps {
 
 const MAX_DATES = 14;
 const MAX_ROWS = 14;
+const LABEL_COL_WIDTH = 128; // px, matches the `w-32` row-label column
 
 export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
   const cells = data ?? [];
@@ -29,29 +30,47 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
   const allDates = Array.from(new Set(cells.map((c) => c.date))).sort();
   const dates = allDates.slice(-MAX_DATES);
 
-  // Lookup map: `${slug}|${date}` -> count, plus a per-row (per-category) max so
-  // one outlier week/category doesn't wash out every other row's intensity.
+  // Lookup map: `${slug}|${date}` -> count, plus a per-row (per-category) max
+  // and total so a single outlier week/category doesn't wash out every other
+  // non-zero cell, and so the bar view (below) can rank rows by activity.
   const lookup = new Map<string, number>();
   const rowMax = new Map<string, number>();
+  const rowTotal = new Map<string, number>();
   for (const c of cells) {
     const key = `${c.category_slug}|${c.date}`;
     lookup.set(key, c.count);
     const prevMax = rowMax.get(c.category_slug) ?? 0;
     if (c.count > prevMax) rowMax.set(c.category_slug, c.count);
+    rowTotal.set(c.category_slug, (rowTotal.get(c.category_slug) ?? 0) + c.count);
   }
 
   // Build rows from the slugs actually present in the data (backend slugs like
   // "reasoning-models"), so lookups match. Fall back to the constant list if empty.
   const dataSlugs = Array.from(new Set(cells.map((c) => c.category_slug)));
   const rowSlugs = (dataSlugs.length ? dataSlugs : CATEGORIES.map((c) => c.slug)).slice(0, MAX_ROWS);
-  const categories = rowSlugs.map((slug) => {
-    const def = getCategory(slug);
-    return { slug, name: def.name === slug ? prettifySlug(slug) : def.name, color: def.color };
-  });
+  const categories = rowSlugs
+    .map((slug) => {
+      const def = getCategory(slug);
+      return { slug, name: def.name === slug ? prettifySlug(slug) : def.name, color: def.color };
+    })
+    .sort((a, b) => (rowTotal.get(b.slug) ?? 0) - (rowTotal.get(a.slug) ?? 0));
+
+  // With only 1-2 weekly buckets (true for a young dataset — there's simply no
+  // history further back yet), a grid of colored cells degenerates into a wall
+  // of solid color blocks with no visible pattern. A ranked bar chart of "papers
+  // this period, by category" reads honestly instead of faking a time series.
+  const isBarView = dates.length > 0 && dates.length <= 2;
+  const latestDate = dates[dates.length - 1];
+  const barMax = Math.max(1, ...categories.map((c) => rowTotal.get(c.slug) ?? 0));
 
   return (
     <Card className="flex h-full flex-col">
       <SectionHeader title="Activity Heatmap" />
+      <p className="-mt-2 mb-3 text-xs text-[var(--text-tertiary)]">
+        {isBarView
+          ? `Papers published per category, week of ${formatDate(latestDate)}`
+          : "Papers published per category, by week"}
+      </p>
 
       {loading ? (
         <div className="space-y-2">
@@ -73,14 +92,54 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
           description="Category activity will render here as papers are indexed."
           compact
         />
+      ) : isBarView ? (
+        <div className="space-y-2.5">
+          {categories.map((cat) => {
+            const count = rowTotal.get(cat.slug) ?? 0;
+            const widthPct = count > 0 ? Math.max(4, (count / barMax) * 100) : 0;
+            return (
+              <div key={cat.slug} className="flex items-center gap-3">
+                <span className="w-32 shrink-0 truncate text-[11px] text-[var(--text-tertiary)]">
+                  {cat.name}
+                </span>
+                <div className="h-5 flex-1 rounded-sm bg-[var(--bg-elevated)]">
+                  <div
+                    className="h-full rounded-sm transition-[width]"
+                    style={{ width: `${widthPct}%`, backgroundColor: cat.color }}
+                  />
+                </div>
+                <span className="w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-[var(--text-secondary)]">
+                  {count}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full">
+            <div className="flex items-center gap-3 pb-1.5">
+              <span className="w-32 shrink-0" style={{ width: LABEL_COL_WIDTH }} />
+              <div className="flex flex-1 gap-1.5">
+                {dates.map((date) => (
+                  <span
+                    key={date}
+                    className="flex-1 truncate text-center text-[10px] text-[var(--text-tertiary)]"
+                  >
+                    {formatDateShort(date)}
+                  </span>
+                ))}
+              </div>
+            </div>
+
             {categories.map((cat) => {
               const max = rowMax.get(cat.slug) ?? 0;
               return (
                 <div key={cat.slug} className="flex items-center gap-3 py-[3px]">
-                  <span className="w-32 shrink-0 truncate text-[11px] text-[var(--text-tertiary)]">
+                  <span
+                    className="shrink-0 truncate text-[11px] text-[var(--text-tertiary)]"
+                    style={{ width: LABEL_COL_WIDTH }}
+                  >
                     {cat.name}
                   </span>
                   <div className="flex flex-1 gap-1.5">
@@ -100,7 +159,7 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
                               count > 0 ? cat.color : "var(--bg-elevated)",
                             opacity: count > 0 ? opacity : 1,
                           }}
-                          title={`${cat.name} · ${formatDateShort(date)} · ${count}`}
+                          title={`${cat.name} · ${formatDateShort(date)} · ${count} papers`}
                         />
                       );
                     })}
@@ -108,16 +167,19 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
                 </div>
               );
             })}
-            <div className="mt-3 flex items-center gap-2 pl-[140px] text-[10px] text-[var(--text-tertiary)]">
-              <span>Less</span>
+            <div
+              className="mt-3 flex items-center gap-2 text-[10px] text-[var(--text-tertiary)]"
+              style={{ paddingLeft: LABEL_COL_WIDTH + 12 }}
+            >
+              <span>Fewer papers</span>
               {[0.25, 0.5, 0.75, 1].map((o, i) => (
                 <div
                   key={i}
-                  className="h-[12px] w-[12px] rounded-sm"
-                  style={{ backgroundColor: getCategory("llms").color, opacity: o }}
+                  className="h-[12px] w-[12px] rounded-sm bg-[var(--text-primary)]"
+                  style={{ opacity: o }}
                 />
               ))}
-              <span>More</span>
+              <span>More papers (relative to that category's busiest week shown)</span>
             </div>
           </div>
         </div>

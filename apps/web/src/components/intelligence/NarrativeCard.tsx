@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { BookOpen, ArrowUpRight, ChevronDown } from "lucide-react";
+import { BookOpen, ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate, prettifySlug } from "@/lib/formatters";
@@ -65,12 +65,9 @@ function renderNarrativeText(text: string, refs: Narrative["referenced_entities"
   return parts;
 }
 
+// Only used on the Intelligence page, directly above the "Explore the engine"
+// grid — shows the full narrative, not a truncated teaser.
 export function NarrativeCard({ narrative }: { narrative: Narrative }) {
-  const [expanded, setExpanded] = useState(false);
-  // AI-generated narratives can run long — collapse by default so this card
-  // doesn't dominate the page, especially above a grid of other features.
-  const collapsible = narrative.narrative_text.length > 320;
-
   return (
     <Card className="flex flex-col">
       <div className="mb-3 flex items-center justify-between">
@@ -85,26 +82,11 @@ export function NarrativeCard({ narrative }: { narrative: Narrative }) {
         </span>
       </div>
 
-      <p
-        className={
-          "text-sm leading-relaxed text-[var(--text-secondary)]" +
-          (collapsible && !expanded ? " line-clamp-3" : "")
-        }
-      >
+      <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
         {renderNarrativeText(narrative.narrative_text, narrative.referenced_entities ?? [])}
       </p>
 
-      {collapsible && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-2 inline-flex w-fit items-center gap-1 text-xs font-medium text-[var(--accent-hover)] hover:opacity-80"
-        >
-          {expanded ? "Show less" : "Show more"}
-          <ChevronDown size={13} className={expanded ? "rotate-180" : ""} />
-        </button>
-      )}
-
-      {expanded && narrative.referenced_entities?.length > 0 && (
+      {narrative.referenced_entities?.length > 0 && (
         <div className="mt-4 border-t border-[var(--border-base)] pt-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
             Referenced

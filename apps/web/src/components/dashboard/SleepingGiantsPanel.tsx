@@ -26,7 +26,7 @@ export function SleepingGiantsPanel({ limit = 3, teaser = false }: SleepingGiant
   const shown = teaser ? items.slice(0, limit) : items;
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex h-full flex-col">
       <SectionHeader
         title="Sleeping Giants"
         action={

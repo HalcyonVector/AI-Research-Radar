@@ -1,3 +1,13 @@
+# CPU-only torch build (~180MB) instead of the default CUDA build pip would
+# otherwise resolve as sentence-transformers' transitive dependency (~770MB,
+# with bundled CUDA/cuDNN libraries mapped into memory at import time). On
+# Render's free tier (512MB RAM total for the whole process), the CUDA build
+# was almost certainly what OOM-killed the container on first search/embed
+# call. Must come before sentence-transformers so pip resolves this pin
+# instead of pulling the unconstrained default.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0+cpu
+
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
