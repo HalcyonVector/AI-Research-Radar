@@ -4,5 +4,5 @@ import { proxyGet } from "@/lib/route-helpers";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, { params }: { params: { paperId: string } }) {
-  return proxyGet(req, `/intelligence/influence/${encodeURIComponent(params.paperId)}`, []);
+  return proxyGet(req, `/intelligence/influence/${encodeURIComponent(params.paperId)}`, [], { timeoutMs: 20000 });
 }

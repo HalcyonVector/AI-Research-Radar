@@ -8,7 +8,7 @@ import { ErrorState } from "@/components/layout/ErrorState";
 import { Button } from "@/components/ui/Button";
 import { ModelCard, ModelCardSkeleton } from "@/components/models/ModelCard";
 import { useModels } from "@/hooks/useModels";
-import { MODEL_SORT_OPTIONS, MODEL_TYPES, CATEGORIES } from "@/lib/constants";
+import { MODEL_SORT_OPTIONS, MODEL_TYPES } from "@/lib/constants";
 import { formatNumber } from "@/lib/formatters";
 
 const selectClass =
@@ -17,7 +17,6 @@ const selectClass =
 export default function ModelsPage() {
   const [sort, setSort] = useState(MODEL_SORT_OPTIONS[0]?.value ?? "growth_score");
   const [modelType, setModelType] = useState("");
-  const [category, setCategory] = useState("");
 
   const {
     data,
@@ -30,7 +29,6 @@ export default function ModelsPage() {
   } = useModels({
     sort,
     model_type: modelType || undefined,
-    category: category || undefined,
   });
 
   const models = data?.pages.flatMap((p) => p.data) ?? [];
@@ -68,20 +66,6 @@ export default function ModelsPage() {
           {MODEL_TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className={selectClass}
-          aria-label="Filter by category"
-        >
-          <option value="">All categories</option>
-          {CATEGORIES.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.name}
             </option>
           ))}
         </select>

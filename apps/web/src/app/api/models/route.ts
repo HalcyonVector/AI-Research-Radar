@@ -4,5 +4,5 @@ import { proxyGet } from "@/lib/route-helpers";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  return proxyGet(req, "/models", ["sort", "model_type", "category", "cursor", "limit"]);
+  return proxyGet(req, "/models", ["sort", "model_type", "cursor", "limit"], { timeoutMs: 20000 });
 }

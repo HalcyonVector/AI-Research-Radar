@@ -5,6 +5,7 @@ import { useCollaborations } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { formatPercent } from "@/lib/formatters";
 import type { Collaboration } from "@/types/intelligence";
 
@@ -43,7 +44,7 @@ function ClusterCard({ cluster }: { cluster: Collaboration }) {
 }
 
 export function CollaborationClusterGraph({ concept }: { concept?: string }) {
-  const { data, isLoading } = useCollaborations(concept);
+  const { data, isLoading, isError, refetch } = useCollaborations(concept);
   const clusters = data?.data ?? [];
 
   return (
@@ -64,6 +65,8 @@ export function CollaborationClusterGraph({ concept }: { concept?: string }) {
             <Skeleton key={i} className="h-40 w-full rounded-xl" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : clusters.length === 0 ? (
         <EmptyState icon={Users} compact title="No clusters detected" description="Collaboration clusters will appear as they form." />
       ) : (

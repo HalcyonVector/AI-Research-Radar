@@ -5,6 +5,7 @@ import { useEvolution } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { formatDate } from "@/lib/formatters";
 import type { EvolutionStage } from "@/types/intelligence";
 
@@ -26,7 +27,7 @@ function Stage({ stage, last }: { stage: EvolutionStage; last: boolean }) {
 }
 
 export function EvolutionTimeline({ concept }: { concept: string }) {
-  const { data, isLoading } = useEvolution(concept);
+  const { data, isLoading, isError, refetch } = useEvolution(concept);
   const stages = data?.stages ?? [];
 
   return (
@@ -47,6 +48,8 @@ export function EvolutionTimeline({ concept }: { concept: string }) {
             <Skeleton key={i} className="h-14 w-full" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : stages.length === 0 ? (
         <EmptyState compact title="No evolution data" description="This concept's lifecycle hasn't been traced yet." />
       ) : (

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import type { LabScorecardEntry } from "@/types/intelligence";
 
 function Row({ rank, entry }: { rank: number; entry: LabScorecardEntry }) {
@@ -67,7 +68,7 @@ function Row({ rank, entry }: { rank: number; entry: LabScorecardEntry }) {
 }
 
 export function LabScorecardPanel({ limit = 20, orgType }: { limit?: number; orgType?: string }) {
-  const { data, isLoading } = useLabScorecard({ limit, orgType });
+  const { data, isLoading, isError, refetch } = useLabScorecard({ limit, orgType });
   const entries = data?.data ?? [];
 
   return (
@@ -89,6 +90,8 @@ export function LabScorecardPanel({ limit = 20, orgType }: { limit?: number; org
             <Skeleton key={i} className="h-20 w-full rounded-xl" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : entries.length === 0 ? (
         <EmptyState
           icon={Trophy}

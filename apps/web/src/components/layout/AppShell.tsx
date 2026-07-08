@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { TopNav } from "./TopNav";
 import { CommandPalette } from "@/components/search/CommandPalette";
+import { CompareBar } from "@/components/papers/CompareBar";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto max-w-[1400px] animate-fade-in">{children}</div>
       </main>
       <CommandPalette />
+      <CompareBar />
     </div>
   );
 }

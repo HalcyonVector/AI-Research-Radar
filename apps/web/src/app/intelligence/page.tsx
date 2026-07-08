@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Brain, ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { NarrativeCard } from "@/components/intelligence/NarrativeCard";
@@ -33,6 +34,7 @@ interface ExploreEntry {
   title: string;
   desc: string;
   isLoading: boolean;
+  isError: boolean;
   teaser: string | null;
 }
 
@@ -51,6 +53,8 @@ function ExploreCard({ entry }: { entry: ExploreEntry }) {
         <div className="mt-2.5 border-t border-[var(--border-base)] pt-2.5">
           {entry.isLoading ? (
             <Skeleton className="h-3 w-4/5" />
+          ) : entry.isError ? (
+            <p className="text-xs leading-relaxed text-[#ef4444]">Couldn&apos;t load — try again shortly</p>
           ) : (
             <p className="line-clamp-2 text-xs leading-relaxed text-[var(--text-tertiary)]">
               {entry.teaser ?? "Not enough data yet"}
@@ -63,7 +67,7 @@ function ExploreCard({ entry }: { entry: ExploreEntry }) {
 }
 
 export default function IntelligencePage() {
-  const { data: narrativeData, isLoading: narrativeLoading } = useNarratives({ scope: "global", limit: 1 });
+  const { data: narrativeData, isLoading: narrativeLoading, isError: narrativeError } = useNarratives({ scope: "global", limit: 1 });
   const narrative = narrativeData?.data?.[0];
 
   // Paper-scoped features (Propagation/Genealogy/DNA) need a real paper ID —
@@ -72,34 +76,34 @@ export default function IntelligencePage() {
   const topPaper = papersData?.pages[0]?.data[0];
   const seedPaperId = topPaper?.id ?? "";
 
-  const { data: giantsData, isLoading: giantsLoading } = useSleepingGiants({ limit: 1 });
+  const { data: giantsData, isLoading: giantsLoading, isError: giantsError } = useSleepingGiants({ limit: 1 });
   const topGiant = giantsData?.data?.[0];
 
-  const { data: frontierData, isLoading: frontierLoading } = useFrontier();
+  const { data: frontierData, isLoading: frontierLoading, isError: frontierError } = useFrontier();
   const topPred = (frontierData?.data ?? [])[0];
 
-  const { data: propData, isLoading: propLoading } = usePropagation(seedPaperId);
+  const { data: propData, isLoading: propLoading, isError: propError } = usePropagation(seedPaperId);
   const propChain = propData?.chain ?? [];
 
-  const { data: dnaData, isLoading: dnaLoading } = useDNA(seedPaperId);
+  const { data: dnaData, isLoading: dnaLoading, isError: dnaError } = useDNA(seedPaperId);
   const dnaComposition = dnaData?.composition ?? [];
 
-  const { data: genData, isLoading: genLoading } = useGenealogy(seedPaperId, 3);
+  const { data: genData, isLoading: genLoading, isError: genError } = useGenealogy(seedPaperId, 3);
   const ancestorCount = countDescendants(genData?.root);
 
-  const { data: collabData, isLoading: collabLoading } = useCollaborations();
+  const { data: collabData, isLoading: collabLoading, isError: collabError } = useCollaborations();
   const topCluster = collabData?.data?.[0];
 
-  const { data: talentData, isLoading: talentLoading } = useTalentFlow({ limit: 1 });
+  const { data: talentData, isLoading: talentLoading, isError: talentError } = useTalentFlow({ limit: 1 });
   const topMove = talentData?.data?.[0];
 
-  const { data: labData, isLoading: labLoading } = useLabScorecard({ limit: 1 });
+  const { data: labData, isLoading: labLoading, isError: labError } = useLabScorecard({ limit: 1 });
   const topLab = labData?.data?.[0];
 
-  const { data: cpData, isLoading: cpLoading } = useCrossPollination("attention");
+  const { data: cpData, isLoading: cpLoading, isError: cpError } = useCrossPollination("attention");
   const cpChain = cpData?.chain ?? [];
 
-  const { data: evoData, isLoading: evoLoading } = useEvolution("chain-of-thought");
+  const { data: evoData, isLoading: evoLoading, isError: evoError } = useEvolution("chain-of-thought");
   const evoStages = evoData?.stages ?? [];
 
   const entries: ExploreEntry[] = [
@@ -108,6 +112,7 @@ export default function IntelligencePage() {
       title: "Sleeping Giants",
       desc: "Under-cited papers about to break out",
       isLoading: giantsLoading,
+      isError: giantsError,
       teaser: topGiant
         ? `Top pick: "${topGiant.paper.title}" — breakout score ${formatScore(topGiant.emerging_breakthrough_score)}`
         : null,
@@ -117,6 +122,7 @@ export default function IntelligencePage() {
       title: "Frontier Predictor",
       desc: "Where the next explosion is likely",
       isLoading: frontierLoading,
+      isError: frontierError,
       teaser: topPred
         ? `${topPred.category.name}: ${Math.round(topPred.explosion_probability * 100)}% chance in ~${topPred.horizon_weeks}w`
         : null,
@@ -128,6 +134,7 @@ export default function IntelligencePage() {
             title: "Idea Propagation",
             desc: "How an idea spread across the ecosystem",
             isLoading: propLoading,
+            isError: propError,
             teaser: propChain.length
               ? `${propChain.length}-step trail traced from "${topPaper?.title}"`
               : null,
@@ -137,6 +144,7 @@ export default function IntelligencePage() {
             title: "Research DNA",
             desc: "The conceptual makeup of a paper",
             isLoading: dnaLoading,
+            isError: dnaError,
             teaser: dnaComposition.length ? `Dominant concept: ${dnaComposition[0].concept}` : null,
           },
           {
@@ -144,6 +152,7 @@ export default function IntelligencePage() {
             title: "Genealogy",
             desc: "The lineage of an idea",
             isLoading: genLoading,
+            isError: genError,
             teaser:
               ancestorCount > 0
                 ? `Traces back through ${ancestorCount} related paper${ancestorCount === 1 ? "" : "s"}`
@@ -156,6 +165,7 @@ export default function IntelligencePage() {
       title: "Collaboration Clusters",
       desc: "Which orgs are converging",
       isLoading: collabLoading,
+      isError: collabError,
       teaser: topCluster
         ? `${topCluster.member_orgs
             .slice(0, 2)
@@ -170,6 +180,7 @@ export default function IntelligencePage() {
       title: "Talent Flow",
       desc: "Researchers moving between organizations",
       isLoading: talentLoading,
+      isError: talentError,
       teaser: topMove
         ? `${topMove.author_name ?? "A researcher"}${
             topMove.from_org ? ` left ${topMove.from_org.name}` : ""
@@ -181,6 +192,7 @@ export default function IntelligencePage() {
       title: "Lab Scorecard",
       desc: "Labs ranked by output, impact, and momentum",
       isLoading: labLoading,
+      isError: labError,
       teaser: topLab
         ? `#1 ${topLab.org.name} — composite ${formatScore(topLab.composite_score)}, ${topLab.papers_30d} papers/30d`
         : null,
@@ -190,6 +202,7 @@ export default function IntelligencePage() {
       title: "Cross-Pollination",
       desc: "How concepts jump between fields",
       isLoading: cpLoading,
+      isError: cpError,
       teaser: cpChain.length
         ? `"Attention" crossed ${cpChain.length} field${cpChain.length === 1 ? "" : "s"}: ${cpChain
             .slice(0, 3)
@@ -202,6 +215,7 @@ export default function IntelligencePage() {
       title: "Concept Evolution",
       desc: "From idea to product",
       isLoading: evoLoading,
+      isError: evoError,
       teaser: evoStages.length
         ? `${evoStages.length} stage${evoStages.length === 1 ? "" : "s"} tracked — latest: ${
             evoStages[evoStages.length - 1].label
@@ -225,6 +239,10 @@ export default function IntelligencePage() {
             <Skeleton className="mb-2 h-4 w-full" />
             <Skeleton className="h-4 w-5/6" />
           </Card>
+        </div>
+      ) : narrativeError ? (
+        <div className="mb-5">
+          <ErrorState compact title="Couldn't load the ecosystem narrative" />
         </div>
       ) : narrative ? (
         <div className="mb-5">

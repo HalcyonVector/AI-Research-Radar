@@ -5,11 +5,12 @@ import { useCrossPollination } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { formatDate } from "@/lib/formatters";
 
 export function CrossPollinationMap({ concept }: { concept: string }) {
-  const { data, isLoading } = useCrossPollination(concept);
+  const { data, isLoading, isError, refetch } = useCrossPollination(concept);
   const chain = data?.chain ?? [];
 
   return (
@@ -30,6 +31,8 @@ export function CrossPollinationMap({ concept }: { concept: string }) {
             <Skeleton key={i} className="h-20 w-40 rounded-lg" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : chain.length === 0 ? (
         <EmptyState compact title="No cross-pollination trail" description="This concept hasn't been traced across domains yet." />
       ) : (

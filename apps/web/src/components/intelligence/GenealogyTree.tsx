@@ -6,6 +6,7 @@ import { useGenealogy } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { formatDate } from "@/lib/formatters";
 import type { GenealogyNode } from "@/types/intelligence";
 
@@ -37,7 +38,7 @@ function TreeNode({ node, depth }: { node: GenealogyNode; depth: number }) {
 }
 
 export function GenealogyTree({ paperId }: { paperId: string }) {
-  const { data, isLoading } = useGenealogy(paperId);
+  const { data, isLoading, isError, refetch } = useGenealogy(paperId);
   const root = data?.root;
 
   return (
@@ -58,6 +59,8 @@ export function GenealogyTree({ paperId }: { paperId: string }) {
             <Skeleton key={i} className="h-10 w-full rounded-lg" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : !root ? (
         <EmptyState compact title="No genealogy" description="Ancestry hasn't been traced for this paper." />
       ) : (

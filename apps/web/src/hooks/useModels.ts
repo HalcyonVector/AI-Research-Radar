@@ -7,7 +7,6 @@ import type { Model, ModelListResponse, ModelHistoryPoint } from "@/types/model"
 export interface ModelsParams {
   sort?: string;
   model_type?: string;
-  category?: string;
   limit?: number;
 }
 

@@ -8,6 +8,7 @@ import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Badge } from "@/components/ui/Badge";
 import { BookmarkButton } from "@/components/ui/BookmarkButton";
+import { CompareToggle } from "@/components/ui/CompareToggle";
 import { AuthorLinks } from "@/components/papers/AuthorLinks";
 import { authorList, formatCompact, formatDate, truncate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,7 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
             )}
           </div>
           <div className="flex items-start gap-2">
+            <CompareToggle paperId={paper.id} title={paper.title} stopPropagation />
             <BookmarkButton entityId={paper.id} entityType="paper" variant="compact" stopPropagation />
             <ScoreRing
               score={paper.scores?.composite ?? 0}
