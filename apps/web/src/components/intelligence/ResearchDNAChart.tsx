@@ -84,12 +84,19 @@ export function ResearchDNAChart({ paperId }: ResearchDNAChartProps) {
       </CardHeader>
 
       {isLoading ? (
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-          <Skeleton className="h-[180px] w-[180px] shrink-0 rounded-full" />
-          <div className="w-full flex-1 space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
-            ))}
+        <div>
+          <p className="-mt-2 mb-3 flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
+            <Dna size={12} className="animate-pulse text-[var(--accent-hover)]" />
+            Analyzing composition
+            <span className="inline-flex w-4 animate-pulse">…</span>
+          </p>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+            <Skeleton className="h-[180px] w-[180px] shrink-0 rounded-full" />
+            <div className="w-full flex-1 space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
           </div>
         </div>
       ) : isError ? (

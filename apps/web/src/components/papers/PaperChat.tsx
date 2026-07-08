@@ -16,17 +16,10 @@ export function PaperChat({ paperId }: PaperChatProps) {
   const [input, setInput] = useState("");
   const chat = useChat(paperId);
   const listRef = useRef<HTMLDivElement>(null);
+  const lastAttempt = useRef<{ question: string; history: ChatMessage[] } | null>(null);
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const question = input.trim();
-    if (!question || chat.isPending) return;
-
-    const history = messages;
-    const userMsg: ChatMessage = { role: "user", content: question };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-
+  const send = (question: string, history: ChatMessage[]) => {
+    lastAttempt.current = { question, history };
     chat.mutate(
       { question, history },
       {
@@ -41,6 +34,22 @@ export function PaperChat({ paperId }: PaperChatProps) {
         },
       }
     );
+  };
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const question = input.trim();
+    if (!question || chat.isPending) return;
+
+    const history = messages;
+    const userMsg: ChatMessage = { role: "user", content: question };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    send(question, history);
+  };
+
+  const onRetry = () => {
+    if (lastAttempt.current) send(lastAttempt.current.question, lastAttempt.current.history);
   };
 
   return (
@@ -116,9 +125,12 @@ export function PaperChat({ paperId }: PaperChatProps) {
         )}
 
         {chat.isError && (
-          <p className="text-xs text-[var(--text-secondary)]">
-            Could not answer that. Please try again.
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-[var(--text-secondary)]">Could not answer that.</p>
+            <Button type="button" variant="ghost" size="sm" onClick={onRetry}>
+              Retry
+            </Button>
+          </div>
         )}
       </div>
 
