@@ -80,7 +80,7 @@ def run(self, max_results: int = MAX_RESULTS):
                 if existing:
                     _mark(pd["arxiv_id"])
                     continue
-                cat = category_for_arxiv(db, pd["categories"])
+                cat = category_for_arxiv(db, pd["categories"], pd["title"], pd["abstract"])
                 paper = Paper(
                     arxiv_id=pd["arxiv_id"], title=pd["title"], abstract=pd["abstract"] or pd["title"],
                     published_at=_parse_dt(pd["published"]), updated_at_source=_parse_dt(pd["updated"]),

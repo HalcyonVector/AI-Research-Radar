@@ -2,15 +2,17 @@
 category_for_arxiv() matching logic (see src/workers/ingestion/common.py).
 
 Background: categories that share an arXiv tag with a broader sibling (e.g.
-ai-agents and multi-agent-systems both claim cs.MA; computer-vision and
-multimodal-ai both claim cs.CV) used to always resolve to whichever category
-came first in table order — so multi-agent-systems and multimodal-ai could
-never be assigned as anyone's primary category, no matter how many matching
-papers existed. That's fixed for new ingestion, but existing papers keep
-their old (possibly wrong) category, because the raw arXiv category tags
-aren't stored anywhere on the Paper row to recompute from — they're only
-used transiently at ingestion time. This re-fetches them from arXiv (batched,
-respecting arXiv's TOS rate limit) and recomputes.
+ai-agents and multi-agent-systems both claim cs.MA; reasoning-models and
+reinforcement-learning both claim cs.LG) used to always resolve to the
+broader sibling, no matter how many matching papers existed — see
+BROADER_SIBLING_OVERRIDE. Three more categories (mcp-ecosystem,
+synthetic-data, evaluation-frameworks) have no unique arXiv tag at all and
+are instead detected from title/abstract keywords — see KEYWORD_CATEGORIES.
+That's fixed for new ingestion, but existing papers keep their old (possibly
+wrong) category, because the raw arXiv category tags aren't stored anywhere
+on the Paper row to recompute from — they're only used transiently at
+ingestion time. This re-fetches them from arXiv (batched, respecting arXiv's
+TOS rate limit) and recomputes.
 
 Run inside the api container:
     docker compose exec -e PYTHONPATH=/app api python /repo/infra/scripts/backfill_paper_categories.py
@@ -69,7 +71,7 @@ def main():
                 raw_cats = cats_by_id.get(p.arxiv_id)
                 if not raw_cats:
                     continue  # arXiv didn't return this id (withdrawn, moved, etc.) - leave as-is
-                new_cat = category_for_arxiv(db, raw_cats)
+                new_cat = category_for_arxiv(db, raw_cats, p.title, p.abstract)
                 if not new_cat or new_cat.id == p.primary_category_id:
                     continue
 
