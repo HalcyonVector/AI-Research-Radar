@@ -2,7 +2,7 @@
 import logging
 import re
 from datetime import date, timedelta, datetime, timezone
-from sqlalchemy import select
+from sqlalchemy import select, func
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper, ResearchCategory, PaperCategory
@@ -33,6 +33,12 @@ def generate_research_narrative(self, scope: str = "global", scope_ref: str | No
     try:
         period_end = date.today()
         period_start = period_end - timedelta(days=months * 30)
+        # don't claim a lookback window wider than the corpus actually covers -
+        # a fresh/young corpus would otherwise show e.g. "Jan-Jul" when every
+        # paper in it was actually published in the last few days
+        earliest = db.scalar(select(func.min(Paper.published_at)))
+        if earliest and earliest.date() > period_start:
+            period_start = earliest.date()
         q = select(Paper).where(Paper.published_at >= period_start).order_by(Paper.composite_score.desc())
         if scope == "category" and scope_ref:
             cat = db.execute(select(ResearchCategory).where(ResearchCategory.slug == scope_ref)).scalar_one_or_none()
@@ -51,7 +57,9 @@ def generate_research_narrative(self, scope: str = "global", scope_ref: str | No
         except Exception:
             logger.exception("narrative generation failed for scope=%s scope_ref=%s - using fallback text",
                              scope, scope_ref)
-            text = (f"Over the last {months} months, activity concentrated around "
+            span_days = (period_end - period_start).days
+            span = f"{span_days} days" if span_days < 60 else f"{round(span_days / 30)} months"
+            text = (f"Over the last {span}, activity concentrated around "
                     f"[[paper:{shift_papers[0].id}]] and related work, with rising implementations and momentum.")
         valid_ids = {str(p.id) for p in shift_papers}
         referenced = [rid for rid in UUID_RE.findall(text) if rid in valid_ids]

@@ -1,3 +1,4 @@
+from datetime import date
 from sqlalchemy import select, desc
 from sqlalchemy.orm import Session
 from src.models import WeeklyReport
@@ -22,5 +23,13 @@ def latest(db: Session) -> dict | None:
 
 
 def by_week(db: Session, week_start: str) -> dict | None:
-    r = db.execute(select(WeeklyReport).where(WeeklyReport.week_start == week_start)).scalar_one_or_none()
+    # week_start column is a Date; comparing it to the raw path-param string
+    # fails at the DB level (postgres has no date = varchar operator) - parse
+    # to an actual date first, treating a malformed value as "not found"
+    # rather than a 500.
+    try:
+        parsed = date.fromisoformat(week_start)
+    except ValueError:
+        return None
+    r = db.execute(select(WeeklyReport).where(WeeklyReport.week_start == parsed)).scalar_one_or_none()
     return _ser(r) if r else None
