@@ -215,11 +215,35 @@ automatically instead of you configuring it by hand.
    0005 automatically) and seeds the 15 research categories on first boot.
 5. Confirm it's alive: `curl https://<your-service>.onrender.com/health` should
    return 200. Note: free Render services sleep after ~15 min idle and take
-   ~30–60s to wake on the next request — that's expected, not a bug.
+   ~30–60s to wake on the next request — that's expected, not a bug. Step 7
+   below sets up a pinger so real visitors rarely hit this.
 
 ---
 
-## 7. Run the one-off expansion scripts
+## 7. Keep the API warm (external pinger)
+
+Why: the free Render service sleeps after ~15 min idle, so the first visitor
+after a gap eats a ~30-60s cold start (Postgres wait + migrations + seed, then
+uvicorn boot). The `ingest-cron.yml` workflow only touches the API every 6h,
+which isn't frequent enough to stop that — you need something pinging well
+under the 15-min sleep window.
+
+1. Go to [cron-job.org](https://cron-job.org) → sign up (free, no card).
+2. **Create cronjob**:
+   - Title: `Keep Render API warm`
+   - URL: `https://<your-service>.onrender.com/health`
+   - Schedule: every 10 minutes
+   - Method: GET
+3. Save, then hit **Run now** to confirm it returns `{"status":"ok",...}`.
+4. Optional: enable failure notifications on the job so an actual outage
+   (vs. a normal cold start) emails you.
+
+No repo or environment changes needed — this runs entirely on cron-job.org's
+infrastructure. UptimeRobot is a drop-in alternative if you prefer it.
+
+---
+
+## 8. Run the one-off expansion scripts
 
 Why: these grow the tracked dataset (Hugging Face models, GitHub repos) beyond
 their current small counts. They take a while and make many external API
@@ -242,7 +266,7 @@ which would time out.
 
 ---
 
-## 8. GitHub Actions secrets (fixes the ingestion cron)
+## 9. GitHub Actions secrets (fixes the ingestion cron)
 
 Why: without an always-on Celery worker (not free on Render), a scheduled
 GitHub Action is what actually triggers periodic ingestion. It needs to know
@@ -263,7 +287,7 @@ your API's URL and auth key.
 
 ---
 
-## 9. Frontend — Vercel
+## 10. Frontend — Vercel
 
 Why: Vercel hosts the Next.js frontend, auto-deploying on every push to `main`.
 
@@ -276,14 +300,14 @@ Why: Vercel hosts the Next.js frontend, auto-deploying on every push to `main`.
    | Key | Value |
    |-----|-------|
    | `API_BASE_URL` | Your Render URL from step 6 |
-   | `API_SECRET_KEY` | Same value as step 8 |
+   | `API_SECRET_KEY` | Same value as step 9 |
    | `NEXT_PUBLIC_APP_URL` | Your Vercel URL (you'll know this after the first deploy — update it then) |
 
 4. Deploy. Every subsequent push to `main` auto-deploys.
 
 ---
 
-## 10. Verify everything end to end
+## 11. Verify everything end to end
 
 - `curl https://<render-url>/health` → 200
 - Open the Vercel URL. The dashboard should show real numbers pulled live from
@@ -292,8 +316,9 @@ Why: Vercel hosts the Next.js frontend, auto-deploying on every push to `main`.
 - Check `/intelligence/talent-flow` — it'll be empty until enough papers have
   gone through OpenAlex affiliation enrichment (runs automatically every 12h,
   or trigger `/internal/ingest/enrich` manually).
-- Confirm the GitHub Action from step 8 shows green on its next scheduled run
+- Confirm the GitHub Action from step 9 shows green on its next scheduled run
   (every 6 hours) or a manual run.
+- Confirm the step 7 pinger job has a successful run in its cron-job.org history.
 
 ---
 

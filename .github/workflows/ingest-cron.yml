@@ -14,6 +14,12 @@ name: Ingest Cron (free scheduler)
 # CELERY_EAGER=true on the free tier means every /internal/* call below runs
 # synchronously inside that one HTTP request — expect these to take a while
 # (the weekly Layer-3 job especially). That's expected, not a bug.
+#
+# NOTE: this schedule (every 6h + weekly) is for driving the ingestion jobs,
+# not for keeping the API warm for user traffic — it's far too infrequent for
+# that (the free service sleeps after ~15 min idle). Warming for real visitors
+# is handled separately by an external pinger (cron-job.org/UptimeRobot) hitting
+# GET /health every ~10 min — see the README's "Free Cloud (Auto-Deploy)" section.
 # -----------------------------------------------------------------------------
 
 on:
