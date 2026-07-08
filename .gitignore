@@ -46,3 +46,6 @@ redisdata/
 
 # ---- Logs ----
 *.log
+
+# ---- Local agent tooling ----
+.claude/
