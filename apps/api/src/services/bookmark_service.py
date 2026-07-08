@@ -15,15 +15,17 @@ def _serialize(b: Bookmark) -> dict:
     }
 
 
-def list_bookmarks(db: Session) -> dict:
-    rows = db.execute(select(Bookmark).order_by(desc(Bookmark.created_at))).scalars().all()
+def list_bookmarks(db: Session, client_key: str) -> dict:
+    rows = db.execute(select(Bookmark).where(Bookmark.client_key == client_key)
+                      .order_by(desc(Bookmark.created_at))).scalars().all()
     return {"data": [_serialize(b) for b in rows]}
 
 
-def create(db: Session, entity_type: str, entity_id: str, note: str | None = None) -> dict:
+def create(db: Session, client_key: str, entity_type: str, entity_id: str, note: str | None = None) -> dict:
     existing = db.execute(
         select(Bookmark).where(
-            Bookmark.entity_type == entity_type, Bookmark.entity_id == entity_id
+            Bookmark.client_key == client_key,
+            Bookmark.entity_type == entity_type, Bookmark.entity_id == entity_id,
         )
     ).scalar_one_or_none()
     if existing:
@@ -31,16 +33,16 @@ def create(db: Session, entity_type: str, entity_id: str, note: str | None = Non
             existing.note = note
             db.commit()
         return _serialize(existing)
-    b = Bookmark(entity_type=entity_type, entity_id=entity_id, note=note)
+    b = Bookmark(client_key=client_key, entity_type=entity_type, entity_id=entity_id, note=note)
     db.add(b)
     db.commit()
     db.refresh(b)
     return _serialize(b)
 
 
-def delete(db: Session, bookmark_id: str) -> bool:
+def delete(db: Session, client_key: str, bookmark_id: str) -> bool:
     b = db.get(Bookmark, bookmark_id)
-    if not b:
+    if not b or b.client_key != client_key:
         return False
     db.delete(b)
     db.commit()

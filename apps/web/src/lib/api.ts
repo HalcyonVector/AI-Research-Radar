@@ -31,6 +31,8 @@ interface FetchOptions {
   /** Override the default 8s upstream timeout — some routes (e.g. search, which
    * may cold-load a local embedding model on first call) legitimately need longer. */
   timeoutMs?: number;
+  /** Extra headers merged into the upstream request (e.g. X-Client-Id). */
+  headers?: Record<string, string>;
 }
 
 function buildUrl(path: string, searchParams?: FetchOptions["searchParams"]): string {
@@ -53,6 +55,7 @@ export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promis
   const url = buildUrl(path, opts.searchParams);
   const headers: Record<string, string> = {
     Accept: "application/json",
+    ...opts.headers,
   };
   if (API_SECRET_KEY) headers["Authorization"] = `Bearer ${API_SECRET_KEY}`;
   if (opts.body) headers["Content-Type"] = "application/json";

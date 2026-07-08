@@ -68,13 +68,25 @@ export function useCreateBookmark() {
   });
 }
 
+interface DeleteArgs {
+  id: string;
+  entityId: string;
+}
+
 export function useDeleteBookmark() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string): Promise<void> => {
+    mutationFn: async ({ id }: DeleteArgs): Promise<void> => {
       const res = await fetch(`/api/bookmarks/${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`Failed to remove bookmark (${res.status})`);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["bookmarks"] }),
+    // clear the local mirror too - every removal path (BookmarkButton, the
+    // Watchlist list) goes through this one mutation now, so there's a single
+    // place keeping localStorage and the server in sync instead of each
+    // call site having to remember to do it.
+    onSuccess: (_data, { entityId }) => {
+      toggleLocalBookmark(entityId, false);
+      qc.invalidateQueries({ queryKey: ["bookmarks"] });
+    },
   });
 }

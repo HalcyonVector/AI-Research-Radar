@@ -16,6 +16,7 @@ export interface SleepingGiant {
 
 export interface SleepingGiantsResponse {
   data: SleepingGiant[];
+  has_more: boolean;
   generated_at: string;
 }
 
@@ -125,6 +126,7 @@ export interface FrontierPrediction {
 export interface FrontierResponse {
   data: FrontierPrediction[];
   model_version: string;
+  disclaimer: string;
 }
 
 export interface Narrative {

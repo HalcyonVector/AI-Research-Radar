@@ -45,9 +45,9 @@ def answer(db: Session, paper_id: str, question: str, history: list[dict] | None
         + f"Question: {question}\n\nAnswer:"
     )
 
-    try:
-        text = llm.complete(prompt, json_mode=False).strip()
-    except Exception as exc:  # fail gracefully
-        text = f"Unable to generate an answer right now ({exc})."
+    # let LLM failures propagate to the app's global exception handler (a real
+    # 500) instead of masking them as a fake 200 answer the frontend can't
+    # distinguish from a real one
+    text = llm.complete(prompt, json_mode=False).strip()
 
     return {"answer": text, "sources": sources}

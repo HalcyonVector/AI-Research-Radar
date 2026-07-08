@@ -39,8 +39,12 @@ export function BookmarkButton({
 
   const serverBookmark = data?.data.find((b) => b.entity_id === entityId);
   useEffect(() => {
-    if (serverBookmark) setSaved(true);
-  }, [serverBookmark]);
+    // reconcile against the server list once it's loaded, not just "found ->
+    // true" - otherwise a removal elsewhere (e.g. the Watchlist page) never
+    // clears this button back to unsaved once the list refetches.
+    if (!data) return;
+    setSaved(!!serverBookmark || readLocalBookmarks().includes(entityId));
+  }, [data, serverBookmark, entityId]);
 
   const onClick = (e: React.MouseEvent) => {
     if (stopPropagation) {
@@ -54,7 +58,7 @@ export function BookmarkButton({
     if (next) {
       create.mutate({ entity_type: entityType, entity_id: entityId });
     } else if (serverBookmark) {
-      remove.mutate(serverBookmark.id);
+      remove.mutate({ id: serverBookmark.id, entityId });
     }
   };
 

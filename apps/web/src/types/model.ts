@@ -13,6 +13,9 @@ export interface Model {
   growth_score: number;
   popularity_score: number;
   linked_paper_id: string | null;
+  license?: string | null;
+  tags?: string[];
+  hf_org_name?: string | null;
 }
 
 export interface ModelHistoryPoint {

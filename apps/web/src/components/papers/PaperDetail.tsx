@@ -79,7 +79,7 @@ export function PaperDetail({ paper }: PaperDetailProps) {
                 </Button>
               </a>
             )}
-            <Link href="/graph">
+            <Link href={`/graph?seed=paper&id=${paper.id}`}>
               <Button variant="secondary" size="sm">
                 <Network size={14} />
                 Open in graph

@@ -1,7 +1,7 @@
 """Hugging Face model ingestion (spec 5.3)."""
 from datetime import date
 import requests
-from sqlalchemy import select
+from sqlalchemy import select, func
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Model, ModelDownloadHistory, Paper
@@ -71,7 +71,6 @@ def upsert_model(db, md: dict, seen: set) -> bool:
         db.add(m)
     m.model_type = md.get("pipeline_tag")
     m.downloads_total = downloads
-    m.downloads_30d = downloads
     m.likes = likes
     m.tags = md.get("tags", [])[:40]
     db.flush()
@@ -82,7 +81,12 @@ def upsert_model(db, md: dict, seen: set) -> bool:
             p = db.execute(select(Paper).where(Paper.arxiv_id == ids[0])).scalar_one_or_none()
             if p:
                 m.linked_paper_id = p.id
-                p.hf_model_count = (p.hf_model_count or 0) + 1
+                db.flush()
+                # recompute fresh (not increment) so repeat ingestion runs stay
+                # idempotent instead of drifting upward - mirrors citation_count/
+                # social_mentions, which are recomputed the same way.
+                p.hf_model_count = db.scalar(
+                    select(func.count(Model.id)).where(Model.linked_paper_id == p.id)) or 0
             break
     # download snapshot
     today = date.today()

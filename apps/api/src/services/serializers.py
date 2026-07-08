@@ -1,5 +1,6 @@
 """ORM -> dict serializers matching the API contract (spec 4.2)."""
-from src.models import Paper
+from sqlalchemy import select
+from src.models import Paper, PaperAuthor, Author, Organization
 
 
 def category_ref(cat) -> dict | None:
@@ -32,13 +33,28 @@ def paper_list_item(p: Paper) -> dict:
     }
 
 
-def paper_detail(p: Paper) -> dict:
+def _first_author_org_name(db, p: Paper) -> str | None:
+    # same "first author's primary org" convention as
+    # workers.intelligence.propagation._org_name
+    first = db.execute(select(PaperAuthor).where(PaperAuthor.paper_id == p.id)
+                       .order_by(PaperAuthor.position)).scalars().first()
+    if not first:
+        return None
+    a = db.get(Author, first.author_id)
+    if not a or not a.primary_org_id:
+        return None
+    o = db.get(Organization, a.primary_org_id)
+    return o.name if o else None
+
+
+def paper_detail(db, p: Paper) -> dict:
     d = paper_list_item(p)
     d.update({
         "abstract": p.abstract,
         "pdf_url": p.pdf_url,
         "html_url": p.html_url,
         "ai_summary": p.ai_summary,
+        "org_name": _first_author_org_name(db, p),
     })
     return d
 

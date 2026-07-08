@@ -91,14 +91,17 @@ def upsert_repo(db, rd: dict) -> bool:
         if p:
             repo.linked_paper_id = p.id
             repo.is_research_impl = True
-            p.github_impl_count = (p.github_impl_count or 0) + 1
             edge = db.execute(select(KnowledgeGraphEdge).where(
                 KnowledgeGraphEdge.source_type == "repo", KnowledgeGraphEdge.source_id == repo.id,
                 KnowledgeGraphEdge.target_type == "paper", KnowledgeGraphEdge.target_id == p.id,
                 KnowledgeGraphEdge.relation == "implements")).scalar_one_or_none()
             if not edge:
+                # only increment on a genuinely new repo->paper link - run() re-scans the
+                # same top-of-page repos every 12h, so this branch is what makes the
+                # counter idempotent instead of drifting upward on every re-scan.
                 db.add(KnowledgeGraphEdge(source_type="repo", source_id=repo.id,
                        target_type="paper", target_id=p.id, relation="implements", source="github"))
+                p.github_impl_count = (p.github_impl_count or 0) + 1
     db.commit()
     if not repo.ai_summary:
         from src.workers.ai.repo_summary import generate as gen_repo_sum

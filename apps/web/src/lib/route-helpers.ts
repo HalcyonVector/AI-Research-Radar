@@ -10,7 +10,7 @@ export async function proxyGet(
   req: NextRequest,
   upstreamPath: string,
   allowedParams: string[] = [],
-  opts: { timeoutMs?: number } = {}
+  opts: { timeoutMs?: number; headers?: Record<string, string> } = {}
 ): Promise<NextResponse> {
   const searchParams: Record<string, string> = {};
   const incoming = req.nextUrl.searchParams;
@@ -25,7 +25,11 @@ export async function proxyGet(
     }
   }
 
-  const result = await safeApiFetch<unknown>(upstreamPath, { searchParams, timeoutMs: opts.timeoutMs });
+  const result = await safeApiFetch<unknown>(upstreamPath, {
+    searchParams,
+    timeoutMs: opts.timeoutMs,
+    headers: opts.headers,
+  });
   if ("error" in result) {
     return NextResponse.json(result.error, { status: result.status });
   }
@@ -41,7 +45,8 @@ export async function proxyMutation(
   req: NextRequest,
   upstreamPath: string,
   method: "POST" | "PUT" | "PATCH" | "DELETE",
-  allowedParams: string[] = []
+  allowedParams: string[] = [],
+  opts: { headers?: Record<string, string> } = {}
 ): Promise<NextResponse> {
   let body: Record<string, unknown> | undefined;
   if (method !== "DELETE") {
@@ -59,7 +64,7 @@ export async function proxyMutation(
     if (v !== null) searchParams[key] = v;
   }
 
-  const result = await safeApiFetch<unknown>(upstreamPath, { method, body, searchParams });
+  const result = await safeApiFetch<unknown>(upstreamPath, { method, body, searchParams, headers: opts.headers });
   if ("error" in result) {
     return NextResponse.json(result.error, { status: result.status });
   }

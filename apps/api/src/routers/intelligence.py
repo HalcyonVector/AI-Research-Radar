@@ -19,8 +19,8 @@ def _validate_uuid(paper_id: str) -> None:
 
 
 @router.get("/sleeping-giants")
-def sleeping_giants(limit: int = 10, category: str | None = None, db: Session = Depends(get_db)):
-    return breakthrough_service.sleeping_giants(db, limit, category)
+def sleeping_giants(limit: int = 10, offset: int = 0, category: str | None = None, db: Session = Depends(get_db)):
+    return breakthrough_service.sleeping_giants(db, limit, offset, category)
 
 
 @router.get("/influence/{paper_id}")

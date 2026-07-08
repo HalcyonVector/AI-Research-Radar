@@ -2,11 +2,12 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Network } from "lucide-react";
 import { useAuthor } from "@/hooks/useAuthor";
 import { PageHeader, SectionHeader } from "@/components/layout/PageHeader";
 import { PaperCard, PaperCardSkeleton } from "@/components/papers/PaperCard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/layout/ErrorState";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { formatNumber } from "@/lib/formatters";
@@ -74,6 +75,14 @@ export default function AuthorPage() {
                 </Link>
               </p>
             )}
+            <div className="mt-4">
+              <Link href={`/graph?seed=author&id=${id}`}>
+                <Button variant="secondary" size="sm">
+                  <Network size={14} />
+                  Open in graph
+                </Button>
+              </Link>
+            </div>
           </PageHeader>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

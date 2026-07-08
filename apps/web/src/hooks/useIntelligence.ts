@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/client";
 import type {
   SleepingGiantsResponse,
@@ -26,6 +26,24 @@ export function useSleepingGiants(opts?: { limit?: number; category?: string }) 
         limit: opts?.limit,
         category: opts?.category,
       }),
+  });
+}
+
+// paginated variant for the dedicated /intelligence/sleeping-giants page - the
+// teaser panel on the dashboard uses useSleepingGiants above instead, since it
+// only ever needs a single fixed-size page.
+export function useSleepingGiantsList(opts?: { limit?: number; category?: string }) {
+  return useInfiniteQuery({
+    queryKey: ["sleeping-giants-list", opts],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      fetchJson<SleepingGiantsResponse>("/api/intelligence/sleeping-giants", {
+        limit: opts?.limit ?? 10,
+        offset: pageParam,
+        category: opts?.category,
+      }),
+    getNextPageParam: (last, allPages) =>
+      last.has_more ? allPages.reduce((sum, p) => sum + p.data.length, 0) : undefined,
   });
 }
 
