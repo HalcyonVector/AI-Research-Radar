@@ -38,6 +38,15 @@ def get_or_create_org(db: Session, name: str) -> Organization:
 # relationships, so no tag-count formula resolves them the same way — this
 # override list encodes which one is which.
 #
+# Each entry also requires a keyword hit, not just the tag subset: an early
+# version of this override fired on cs.MA alone, which turned out to route
+# *every* cs.AI+cs.MA paper to Multi-Agent Systems - including single-agent
+# papers where cs.MA was a secondary/incidental tag - leaving AI Agents with
+# zero papers (confirmed against production data). Requiring the text to
+# actually discuss multi-agent coordination keeps the override narrow: it
+# only overrides when the paper is genuinely about the narrower sub-topic,
+# not just tagged adjacent to it.
+#
 # NOT included here: reasoning-models -> reinforcement-learning. cs.LG
 # ("Machine Learning") is arXiv's generic catch-all, not RL-specific — arXiv
 # has no dedicated RL category at all — so treating reinforcement-learning's
@@ -46,8 +55,12 @@ def get_or_create_org(db: Session, name: str) -> Organization:
 # of them, since cs.LG is reasoning-models' own second tag). Unlike cs.MA,
 # a shared generic tag isn't a real specificity signal; RL is keyword-gated
 # below instead, same as the categories with no dedicated tag at all.
-BROADER_SIBLING_OVERRIDE = {
-    "ai-agents": "multi-agent-systems",
+BROADER_SIBLING_OVERRIDE: dict[str, tuple[str, list[str]]] = {
+    "ai-agents": ("multi-agent-systems", [
+        "multi-agent", "multi agent", "multiagent", "multiple agents",
+        "agent coordination", "cooperative agents", "competing agents",
+        "swarm of agents", "decentralized agents", "collaborative agents",
+    ]),
 }
 
 # Categories where arXiv tags alone can't reliably identify the topic, either
@@ -101,8 +114,9 @@ def category_for_arxiv(
     first), tie-broken toward the more specific (fewer total tags) category,
     then by the category's stable display order. BROADER_SIBLING_OVERRIDE
     then fixes the subset-of-a-sibling cases that formula still gets
-    backwards, and KEYWORD_CATEGORIES catches the categories tag scoring can
-    never reach at all (see its docstring) via title/abstract text.
+    backwards (only when the text also corroborates it - see its docstring),
+    and KEYWORD_CATEGORIES catches the categories tag scoring can never reach
+    at all (see its docstring) via title/abstract text.
     """
     cats = db.execute(select(ResearchCategory).order_by(ResearchCategory.display_order)).scalars().all()
     if not cats:
@@ -132,10 +146,14 @@ def category_for_arxiv(
     if best is None:
         return cats[0]
 
-    narrow_slug = BROADER_SIBLING_OVERRIDE.get(best.slug)
-    narrow = by_slug.get(narrow_slug) if narrow_slug else None
-    if narrow:
-        narrow_tags = set(narrow.arxiv_categories or [])
-        if narrow_tags and narrow_tags <= paper_tags:
-            return narrow
+    override = BROADER_SIBLING_OVERRIDE.get(best.slug)
+    if override:
+        narrow_slug, narrow_keywords = override
+        narrow = by_slug.get(narrow_slug)
+        if narrow:
+            narrow_tags = set(narrow.arxiv_categories or [])
+            tag_ok = narrow_tags and narrow_tags <= paper_tags
+            keyword_ok = any(kw in text for kw in narrow_keywords)
+            if tag_ok and keyword_ok:
+                return narrow
     return best
