@@ -16,6 +16,7 @@ A continuously-updated intelligence layer over the global AI research ecosystem 
 - **Hybrid Search** — Semantic (pgvector) + keyword (full-text) search with a `Cmd+K` command palette
 - **Knowledge Graph** — D3 force-directed graph over papers, authors, orgs, models, and repos with `cites / authored_by / implements / based_on` edges
 - **Weekly AI Briefing** — Auto-generated every Monday: this week in numbers, big stories, emerging signals, papers worth your time, and what to watch
+- **Watchlist** — Bookmark papers/models and save standing topic watches (query or category) that surface a digest of what's new since you last checked. Scoped to an anonymous per-browser id (no login system) rather than shared globally
 
 ### Research Intelligence Engine (Layer 3 — the flagship)
 A reasoning layer over the knowledge graph. Every capability is computed from data already ingested — no new sources:
@@ -189,7 +190,8 @@ ai-research-radar/
 ├── infra/
 │   ├── docker/                   # Dockerfile.api, Dockerfile.worker, compose
 │   ├── scripts/                  # seed_categories.py, expand_models.py,
-│   │                             #   expand_repos.py, backfill_affiliations.py
+│   │                             #   expand_repos.py, backfill_affiliations.py,
+│   │                             #   backfill_paper_categories.py
 │   └── fly.toml                  # Fly.io config (alt host)
 │
 ├── docs/
@@ -215,6 +217,8 @@ All research data comes from free public APIs: **[arXiv](https://arxiv.org)** (p
 | **Perception** | Computer Vision, Multimodal AI, Speech AI |
 | **Systems & Learning** | Robotics, Reinforcement Learning, AI Infrastructure, Synthetic Data |
 
+Papers are mapped to a category primarily by arXiv tag overlap (`category_for_arxiv()`), with two fallbacks for cases the tag taxonomy alone can't resolve: a narrow-sibling override for categories whose tags are a genuine subset of a broader sibling's (e.g. Multi-Agent Systems within AI Agents), and title/abstract keyword matching for categories arXiv has no dedicated tag for at all (MCP Ecosystem, Reinforcement Learning, Synthetic Data, Evaluation Frameworks).
+
 ### Scoring Formulas
 - **Impact** = log-normalized citations (40) + implementations (30) + discussion (20) + HF models (10)
 - **Momentum** = age-adjusted EWMA of citation velocity
@@ -223,6 +227,7 @@ All research data comes from free public APIs: **[arXiv](https://arxiv.org)** (p
 - **Emerging Breakthrough** (Sleeping Giants) = growth-rate blend, citation count deliberately excluded
 - **Frontier Probability** = trained logistic regression over lagged trend signals once enough weekly history exists, with a bounded heuristic fallback before that
 - **Lab Scorecard** = weighted blend of normalized paper output, average paper impact, and 30-day publication momentum per organization
+- **Growth/Momentum warm-up** — a category's week-over-week Growth and Momentum are withheld (shown as "new," not a computed value) until its corpus spans at least 14 days, since a shorter history makes the week-over-week ratio meaningless rather than genuinely flat or spiking
 
 ### Pipeline
 ```
@@ -275,6 +280,7 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 | **Seed categories** | `python infra/scripts/seed_categories.py` | The 15 research categories |
 | **Expand model crawl** | `python infra/scripts/expand_models.py [target]` | One-off deep Hugging Face model crawl |
 | **Expand repo crawl** | `python infra/scripts/expand_repos.py [target]` | One-off deep GitHub repo crawl |
+| **Backfill paper categories** | `python infra/scripts/backfill_paper_categories.py` | Recompute `primary_category` for existing papers with the current `category_for_arxiv()` logic. Re-fetches each paper's raw arXiv tags (they aren't stored on the row) in batches, respecting arXiv's rate limit. Safe to re-run — idempotent, only touches papers whose category actually changes |
 | **Run API** | `uvicorn src.main:app --reload --port 8000` | FastAPI + Swagger at `/docs` |
 | **Run a worker** | `celery -A src.celery_app worker -Q <queues> -l info` | Ingestion/AI/scoring/intelligence |
 | **Trigger ingestion** | `curl -X POST .../api/v1/internal/ingest/trigger -H "Authorization: Bearer <KEY>"` | Fetch real papers/models/repos |
