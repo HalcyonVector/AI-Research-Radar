@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { CATEGORIES, getCategory } from "@/lib/constants";
-import { formatDateShort } from "@/lib/formatters";
+import { formatDateShort, prettifySlug } from "@/lib/formatters";
 
 interface HeatmapCell {
   category_slug: string;
@@ -42,12 +42,11 @@ export function ActivityHeatmap({ data, loading }: ActivityHeatmapProps) {
 
   // Build rows from the slugs actually present in the data (backend slugs like
   // "reasoning-models"), so lookups match. Fall back to the constant list if empty.
-  const prettify = (s: string) => s.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
   const dataSlugs = Array.from(new Set(cells.map((c) => c.category_slug)));
   const rowSlugs = (dataSlugs.length ? dataSlugs : CATEGORIES.map((c) => c.slug)).slice(0, MAX_ROWS);
   const categories = rowSlugs.map((slug) => {
     const def = getCategory(slug);
-    return { slug, name: def.name === slug ? prettify(slug) : def.name, color: def.color };
+    return { slug, name: def.name === slug ? prettifySlug(slug) : def.name, color: def.color };
   });
 
   return (

@@ -63,7 +63,7 @@ export function EmergingAreasPanel({ trends, loading }: EmergingAreasPanelProps)
                   color={cat?.color}
                   fill
                 />
-                <GrowthBadge value={trend.delta_7d?.growth ?? 0} />
+                <GrowthBadge value={trend.delta_7d?.growth ?? null} />
               </Link>
             );
           })}

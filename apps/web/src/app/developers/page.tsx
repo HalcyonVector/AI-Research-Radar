@@ -46,9 +46,8 @@ const ENDPOINTS: { group: string; items: Endpoint[] }[] = [
   },
 ];
 
-const CURL = `curl -s https://api.airesearchradar.dev/api/v1/papers \\
-  -H "Accept: application/json" \\
-  -H "X-API-Key: $YOUR_KEY"   # optional — raises your rate limit`;
+const CURL = `curl -s https://ai-research-radar-api.onrender.com/api/v1/papers \\
+  -H "Accept: application/json"`;
 
 function MethodTag({ method }: { method: string }) {
   return (
@@ -69,11 +68,11 @@ export default function DevelopersPage() {
 
       <Card>
         <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-          All endpoints below are read-only and return JSON. The base path is{" "}
-          <code className="font-mono text-[var(--text-primary)]">/api/v1</code>. Requests are
-          unauthenticated by default. Passing an optional{" "}
-          <code className="font-mono text-[var(--text-primary)]">X-API-Key</code> header lifts your
-          rate limit from the anonymous tier to the registered tier.
+          All endpoints below are read-only and return JSON, served directly from{" "}
+          <code className="font-mono text-[var(--text-primary)]">
+            https://ai-research-radar-api.onrender.com/api/v1
+          </code>
+          . Requests are unauthenticated by default and rate-limited per IP.
         </p>
       </Card>
 
@@ -111,10 +110,9 @@ export default function DevelopersPage() {
           Rate limits
         </p>
         <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-          Anonymous requests are limited per IP. Supplying{" "}
-          <code className="font-mono text-[var(--text-primary)]">X-API-Key</code> raises the limit
-          and enables burst allowances. Keys are optional for all public read endpoints — no key is
-          required to explore the data.
+          Anonymous requests are limited per IP — no key required to explore the data. The API
+          supports a higher-limit <code className="font-mono text-[var(--text-primary)]">X-API-Key</code>{" "}
+          tier internally, but there&apos;s no public self-serve signup for one yet.
         </p>
       </Card>
     </div>

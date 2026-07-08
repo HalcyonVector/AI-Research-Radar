@@ -74,7 +74,7 @@ export function CategoryCard({ trend, index }: CategoryCardProps) {
         </div>
 
         <div className="mt-auto flex items-center justify-between border-t border-[var(--border-base)] pt-3">
-          <GrowthBadge value={trend.delta_7d?.growth ?? 0} suffix="%" />
+          <GrowthBadge value={trend.delta_7d?.growth ?? null} suffix="%" />
           <span className="text-xs tabular-nums text-[var(--text-tertiary)]">
             {formatCompact(trend.papers_7d ?? 0)} papers
           </span>
