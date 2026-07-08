@@ -152,8 +152,16 @@ export function PaperCardSkeleton({ variant = "default" }: { variant?: "default"
       <div className="skeleton mb-2 h-4 w-full rounded" />
       <div className="skeleton mb-3 h-4 w-3/4 rounded" />
       <div className="skeleton mb-1.5 h-3 w-full rounded" />
-      <div className="skeleton mb-4 h-3 w-5/6 rounded" />
-      <div className="skeleton h-3 w-1/2 rounded" />
+      <div className="skeleton mb-3 h-3 w-5/6 rounded" />
+      <div className="skeleton mb-3 h-3 w-1/2 rounded" />
+      <div className="mt-3 flex items-center justify-between border-t border-[var(--border-base)] pt-3">
+        <div className="flex items-center gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton h-3 w-8 rounded" />
+          ))}
+        </div>
+        <div className="skeleton h-3 w-14 rounded" />
+      </div>
     </div>
   );
 }

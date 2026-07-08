@@ -43,11 +43,20 @@ export function EvolutionTimeline({ concept }: { concept: string }) {
       </p>
 
       {isLoading ? (
-        <div className="space-y-4">
+        <ol>
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-14 w-full" />
+            <li key={i} className="relative flex gap-4 pb-6 last:pb-0">
+              {i < 3 && (
+                <span className="absolute left-[7px] top-4 h-full w-px bg-[var(--border-base)]" aria-hidden />
+              )}
+              <Skeleton className="relative z-10 mt-1 h-3.5 w-3.5 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3.5 w-2/3" />
+              </div>
+            </li>
           ))}
-        </div>
+        </ol>
       ) : isError ? (
         <ErrorState compact onRetry={() => refetch()} />
       ) : stages.length === 0 ? (

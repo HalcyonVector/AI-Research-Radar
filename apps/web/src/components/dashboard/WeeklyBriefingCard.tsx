@@ -16,12 +16,14 @@ export function WeeklyBriefingCard({ preview, loading }: WeeklyBriefingCardProps
   if (loading) {
     return (
       <Card className="flex h-full flex-col">
-        <Skeleton className="mb-3 h-3 w-28" />
-        <Skeleton className="mb-2 h-5 w-4/5" />
-        <Skeleton className="mb-1.5 h-3 w-full" />
-        <Skeleton className="mb-1.5 h-3 w-full" />
-        <Skeleton className="mb-4 h-3 w-2/3" />
-        <Skeleton className="mt-auto h-9 w-32" />
+        <Skeleton className="mb-1 h-3 w-28" />
+        <Skeleton className="h-5 w-4/5" />
+        <div className="mt-2 flex-1 space-y-1.5">
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-2/3" />
+        </div>
+        <Skeleton className="mt-3 h-3 w-24" />
+        <Skeleton className="mt-4 h-4 w-24" />
       </Card>
     );
   }
