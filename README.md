@@ -280,7 +280,8 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 | **Seed categories** | `python infra/scripts/seed_categories.py` | The 15 research categories |
 | **Expand model crawl** | `python infra/scripts/expand_models.py [target]` | One-off deep Hugging Face model crawl |
 | **Expand repo crawl** | `python infra/scripts/expand_repos.py [target]` | One-off deep GitHub repo crawl |
-| **Backfill paper categories** | `python infra/scripts/backfill_paper_categories.py` | Recompute `primary_category` for existing papers with the current `category_for_arxiv()` logic. Re-fetches each paper's raw arXiv tags (they aren't stored on the row) in batches, respecting arXiv's rate limit. Safe to re-run — idempotent, only touches papers whose category actually changes |
+| **Backfill paper categories (local)** | `python infra/scripts/backfill_paper_categories.py` (needs the Docker Compose `/repo` mount — not present in the deployed image) | Recompute `primary_category` for existing papers with the current `category_for_arxiv()` logic. Re-fetches each paper's raw arXiv tags (they aren't stored on the row) in batches, respecting arXiv's rate limit. Safe to re-run — idempotent, only touches papers whose category actually changes |
+| **Backfill paper categories (deployed)** | `curl -X POST .../api/v1/internal/categories/backfill -H "Authorization: Bearer <KEY>"` | Same recompute, as a Celery task triggerable without Shell access — the only way to run it against Render's free tier |
 | **Run API** | `uvicorn src.main:app --reload --port 8000` | FastAPI + Swagger at `/docs` |
 | **Run a worker** | `celery -A src.celery_app worker -Q <queues> -l info` | Ingestion/AI/scoring/intelligence |
 | **Trigger ingestion** | `curl -X POST .../api/v1/internal/ingest/trigger -H "Authorization: Bearer <KEY>"` | Fetch real papers/models/repos |

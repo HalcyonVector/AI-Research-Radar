@@ -14,10 +14,16 @@ on the Paper row to recompute from — they're only used transiently at
 ingestion time. This re-fetches them from arXiv (batched, respecting arXiv's
 TOS rate limit) and recomputes.
 
-Run inside the api container:
+Run inside a local Docker Compose stack (which mounts the whole repo at
+/repo, so this script is actually reachable there):
     docker compose exec -e PYTHONPATH=/app api python /repo/infra/scripts/backfill_paper_categories.py
-Or via Render's Shell tab on the deployed service:
-    python infra/scripts/backfill_paper_categories.py
+
+For the deployed Render service, use this script's Celery-task twin instead
+— src/workers/maintenance/backfill_categories.py, triggered via
+POST /api/v1/internal/categories/backfill. The deployed image only ever
+contains src/, migrations/, and entrypoint.sh (see Dockerfile.api), so this
+script itself is never present there, and Render's free tier has no Shell
+access anyway.
 
 Safe to re-run — already-correct papers are left untouched, so a second run
 is a fast no-op except for whatever the first run couldn't fetch.
