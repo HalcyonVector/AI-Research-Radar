@@ -1,4 +1,5 @@
 """Research Storytelling narratives (spec 1.4.8.10)."""
+import logging
 import re
 from datetime import date, timedelta, datetime, timezone
 from sqlalchemy import select
@@ -11,6 +12,7 @@ from src.config import settings
 from src.ai.prompts import NARRATIVE_PROMPT
 
 UUID_RE = re.compile(r"\[\[paper:([0-9a-fA-F-]{36})\]\]")
+logger = logging.getLogger(__name__)
 
 
 @celery_app.task(name="workers.intelligence.narrative.generate_all")
@@ -47,6 +49,8 @@ def generate_research_narrative(self, scope: str = "global", scope_ref: str | No
                 model=settings.openai_model_heavy)
             text = res.get("narrative_text", "")
         except Exception:
+            logger.exception("narrative generation failed for scope=%s scope_ref=%s - using fallback text",
+                             scope, scope_ref)
             text = (f"Over the last {months} months, activity concentrated around "
                     f"[[paper:{shift_papers[0].id}]] and related work, with rising implementations and momentum.")
         valid_ids = {str(p.id) for p in shift_papers}

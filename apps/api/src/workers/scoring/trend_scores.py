@@ -20,6 +20,13 @@ def _count(db, cat_id, start, end) -> int:
                             Paper.published_at >= start, Paper.published_at < end)) or 0
 
 
+def _model_count(db, cat_id, start, end) -> int:
+    return db.scalar(select(func.coalesce(func.sum(Paper.hf_model_count), 0))
+                     .join(PaperCategory, PaperCategory.paper_id == Paper.id)
+                     .where(PaperCategory.category_id == cat_id,
+                            Paper.published_at >= start, Paper.published_at < end)) or 0
+
+
 @celery_app.task(name="workers.scoring.trend_scores.run")
 def run():
     db = session_scope()
@@ -31,6 +38,7 @@ def run():
         for c in cats:
             this_week = _count(db, c.id, today - timedelta(days=7), today + timedelta(days=1))
             last_week = _count(db, c.id, today - timedelta(days=14), today - timedelta(days=7))
+            models_this_week = _model_count(db, c.id, today - timedelta(days=7), today + timedelta(days=1))
             activity = min(this_week / 5.0, 100.0)
             top = db.execute(select(Paper.id).join(PaperCategory, PaperCategory.paper_id == Paper.id)
                              .where(PaperCategory.category_id == c.id)
@@ -42,6 +50,7 @@ def run():
                 snap = TrendSnapshot(category_id=c.id, snapshot_date=today, period="weekly")
                 db.add(snap)
             snap.paper_count = this_week
+            snap.model_count = models_this_week
             if has_history:
                 g = growth_score(this_week, last_week)
                 hist = db.execute(select(TrendSnapshot.growth_score).where(

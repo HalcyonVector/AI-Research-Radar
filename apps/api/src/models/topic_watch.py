@@ -7,9 +7,12 @@ from src.database import Base
 
 
 class TopicWatch(Base):
-    """A saved topic watch that produces digests of recent matching papers (feature: watches)."""
+    """A saved topic watch that produces digests of recent matching papers
+    (feature: watches), scoped to an anonymous browser client. client_key is a
+    per-browser id, not a real account - see src.middleware.client_key."""
     __tablename__ = "topic_watches"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_key: Mapped[str | None] = mapped_column(String(64), index=True)
     label: Mapped[str] = mapped_column(Text, nullable=False)
     query: Mapped[str | None] = mapped_column(Text)
     category_slug: Mapped[str | None] = mapped_column(String(50))

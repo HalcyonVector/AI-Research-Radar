@@ -39,9 +39,13 @@ def compute_breakthrough_scores(limit: int = 2000):
             deriv = db.scalar(select(__import__("sqlalchemy").func.count()).select_from(KnowledgeGraphEdge)
                               .where(KnowledgeGraphEdge.relation == "derived_from",
                                      KnowledgeGraphEdge.target_id == p.id)) or 0
-            infl = influence_score(cit_g, min((p.github_impl_count or 0) / 50, 1.0),
-                                   min((p.hf_model_count or 0) / 20, 1.0), disc_g,
-                                   min(deriv / 10, 1.0), 0.2)
+            impl_norm = min((p.github_impl_count or 0) / 50, 1.0)
+            hf_norm = min((p.hf_model_count or 0) / 20, 1.0)
+            deriv_norm = min(deriv / 10, 1.0)
+            # placeholder signal - spec 1.4.8.8 defines cross-domain reach but no
+            # real cross-domain citation/field-diversity analysis exists yet
+            cross_domain = 0.2
+            infl = influence_score(cit_g, impl_norm, hf_norm, disc_g, deriv_norm, cross_domain)
             rec = db.get(PaperIntelligenceScores, p.id)
             if not rec:
                 rec = PaperIntelligenceScores(paper_id=p.id)
@@ -49,9 +53,16 @@ def compute_breakthrough_scores(limit: int = 2000):
             rec.emerging_breakthrough_score = eb
             rec.breakthrough_driver = driver
             rec.influence_score = infl
-            rec.influence_components = {"citation_velocity": cit_g, "implementations": p.github_impl_count,
-                                        "hf_models": p.hf_model_count, "discussion": p.social_mentions,
-                                        "derivatives": deriv}
+            # keys/scale must match InfluenceComponents on the frontend, which
+            # renders every value directly as a 0-100 bar (no /100 or *100 there)
+            rec.influence_components = {
+                "citation_velocity": round(cit_g * 100, 1),
+                "implementation_count": round(impl_norm * 100, 1),
+                "hf_model_count": round(hf_norm * 100, 1),
+                "discussion": round(disc_g * 100, 1),
+                "derivative_papers": round(deriv_norm * 100, 1),
+                "cross_domain_spread": round(cross_domain * 100, 1),
+            }
             if eb > 0 and driver:
                 rec.ai_rationale = f"Citations still low ({p.citation_count}), but {driver} are the dominant growth signal this month."
             rec.computed_at = datetime.now(timezone.utc)

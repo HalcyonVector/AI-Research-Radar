@@ -13,7 +13,7 @@ _DRIVER_DETAIL = {
 }
 
 
-def sleeping_giants(db: Session, limit=10, category=None) -> dict:
+def sleeping_giants(db: Session, limit=10, offset=0, category=None) -> dict:
     stmt = (select(PaperIntelligenceScores, Paper)
             .join(Paper, Paper.id == PaperIntelligenceScores.paper_id)
             .where(PaperIntelligenceScores.emerging_breakthrough_score > 0))
@@ -21,8 +21,10 @@ def sleeping_giants(db: Session, limit=10, category=None) -> dict:
         stmt = (stmt.join(PaperCategory, PaperCategory.paper_id == Paper.id)
                 .join(ResearchCategory, ResearchCategory.id == PaperCategory.category_id)
                 .where(ResearchCategory.slug == category))
-    stmt = stmt.order_by(desc(PaperIntelligenceScores.emerging_breakthrough_score)).limit(limit)
+    stmt = stmt.order_by(desc(PaperIntelligenceScores.emerging_breakthrough_score)).offset(offset).limit(limit + 1)
     rows = db.execute(stmt).all()
+    has_more = len(rows) > limit
+    rows = rows[:limit]
     return {
         "data": [{
             "paper": {"id": str(p.id), "arxiv_id": p.arxiv_id, "title": p.title, "citation_count": p.citation_count},
@@ -32,6 +34,7 @@ def sleeping_giants(db: Session, limit=10, category=None) -> dict:
             "ai_rationale": s.ai_rationale,
             "computed_at": s.computed_at.isoformat() if s.computed_at else None,
         } for s, p in rows],
+        "has_more": has_more,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 

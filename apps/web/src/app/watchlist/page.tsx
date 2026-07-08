@@ -56,7 +56,7 @@ function BookmarksSection() {
               </Link>
               <button
                 type="button"
-                onClick={() => remove.mutate(b.id)}
+                onClick={() => remove.mutate({ id: b.id, entityId: b.entity_id })}
                 className="shrink-0 border border-[var(--rule-strong)] px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--text-secondary)] transition-colors hover:border-[var(--text-primary)] hover:text-[var(--text-primary)]"
               >
                 Remove

@@ -5,13 +5,24 @@ from src.models import Paper, PaperCategory, ResearchCategory, PaperConceptCompo
 from src.services import serializers as S
 from src.utils.pagination import encode_cursor, decode_cursor
 
-SORTABLE = {"composite_score", "published_at", "momentum_score", "impact_score"}
+# frontend SORT_OPTIONS sends short semantic keys ("composite", "recent", ...);
+# internal callers (e.g. watch_service.digest) pass real Paper column names
+# directly - both forms are accepted here so neither breaks the other.
+SORT_MAP = {
+    "composite": "composite_score", "composite_score": "composite_score",
+    "impact": "impact_score", "impact_score": "impact_score",
+    "momentum": "momentum_score", "momentum_score": "momentum_score",
+    "innovation": "innovation_score", "innovation_score": "innovation_score",
+    "recent": "published_at", "published_at": "published_at",
+    "citations": "citation_count", "citation_count": "citation_count",
+}
+DEFAULT_SORT = "composite_score"
 
 
 def list_papers(db: Session, q=None, category=None, date_from=None, date_to=None,
-                sort="composite_score", has_summary=None, cursor=None, limit=20) -> dict:
+                sort="composite", has_summary=None, cursor=None, limit=20) -> dict:
     limit = max(1, min(limit, 100))
-    sort = sort if sort in SORTABLE else "composite_score"
+    sort = SORT_MAP.get(sort, DEFAULT_SORT)
     stmt = select(Paper).options(selectinload(Paper.authors), selectinload(Paper.primary_category))
 
     if category:
@@ -50,7 +61,7 @@ def list_papers(db: Session, q=None, category=None, date_from=None, date_to=None
 
 def get_paper(db: Session, paper_id: str) -> dict | None:
     p = db.get(Paper, paper_id)
-    return S.paper_detail(p) if p else None
+    return S.paper_detail(db, p) if p else None
 
 
 def related_papers(db: Session, paper_id: str, limit=8) -> list[dict]:
@@ -63,9 +74,13 @@ def related_papers(db: Session, paper_id: str, limit=8) -> list[dict]:
             "ORDER BY abstract_embedding <=> (SELECT abstract_embedding FROM papers WHERE id=:pid) "
             "LIMIT :lim"
         )
-        ids = [r[0] for r in db.execute(stmt, {"pid": str(p.id), "lim": limit})]
-        papers = [db.get(Paper, i) for i in ids]
-        return [S.paper_list_item(x) for x in papers if x]
+        ids = [str(r[0]) for r in db.execute(stmt, {"pid": str(p.id), "lim": limit})]
+        if not ids:
+            return []
+        rows = db.execute(select(Paper).where(Paper.id.in_(ids))).scalars().all()
+        by_id = {str(x.id): x for x in rows}
+        ordered = [by_id[i] for i in ids if i in by_id]  # preserve similarity-ranked order
+        return [S.paper_list_item(x) for x in ordered]
     # fallback: same category, top composite
     if p.primary_category_id:
         rows = db.execute(
@@ -84,7 +99,7 @@ def compare(db: Session, ids: list[str]) -> dict:
         p = db.get(Paper, pid)
         if not p:
             continue
-        papers.append(S.paper_detail(p))
+        papers.append(S.paper_detail(db, p))
         comps = db.execute(
             select(PaperConceptComposition)
             .where(PaperConceptComposition.paper_id == p.id)

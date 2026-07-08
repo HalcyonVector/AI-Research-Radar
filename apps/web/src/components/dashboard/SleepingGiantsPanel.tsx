@@ -4,13 +4,16 @@ import Link from "next/link";
 import { Moon, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { ErrorState } from "@/components/layout/ErrorState";
-import { useSleepingGiants } from "@/hooks/useIntelligence";
+import { useSleepingGiantsList } from "@/hooks/useIntelligence";
 import { truncate } from "@/lib/formatters";
+
+const FULL_PAGE_SIZE = 10;
 
 interface SleepingGiantsPanelProps {
   limit?: number;
@@ -18,11 +21,17 @@ interface SleepingGiantsPanelProps {
 }
 
 export function SleepingGiantsPanel({ limit = 3, teaser = false }: SleepingGiantsPanelProps) {
-  const { data, isLoading, isError, refetch } = useSleepingGiants({
-    limit: teaser ? limit : undefined,
-  });
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useSleepingGiantsList({ limit: teaser ? limit : FULL_PAGE_SIZE });
 
-  const items = data?.data ?? [];
+  const items = data?.pages.flatMap((p) => p.data) ?? [];
   const shown = teaser ? items.slice(0, limit) : items;
 
   return (
@@ -104,6 +113,14 @@ export function SleepingGiantsPanel({ limit = 3, teaser = false }: SleepingGiant
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!teaser && hasNextPage && (
+        <div className="mt-4 flex justify-center">
+          <Button variant="secondary" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </Button>
         </div>
       )}
 

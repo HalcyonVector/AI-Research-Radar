@@ -39,12 +39,28 @@ def similar_dna(db: Session, paper_id: str, limit=6) -> dict:
             PaperConceptComposition.paper_id != paper_id,
         ).distinct()
     ).scalars().all()
-    scored = []
-    for cid in candidate_ids:
-        dist = 1 - _cosine(target, _vec(db, str(cid)))
-        p = db.get(Paper, cid)
+    if not candidate_ids:
+        return {"paper_id": str(paper_id), "matches": []}
+
+    # batch-fetch every candidate's concept vector in one query (was one _vec()
+    # query + one db.get() per candidate)
+    rows = db.execute(select(PaperConceptComposition).where(
+        PaperConceptComposition.paper_id.in_(candidate_ids))).scalars().all()
+    vecs: dict = {}
+    for r in rows:
+        vecs.setdefault(r.paper_id, {})[r.concept] = r.weight
+
+    ranked = sorted(
+        ((cid, 1 - _cosine(target, vecs.get(cid, {}))) for cid in candidate_ids),
+        key=lambda x: x[1],
+    )[:limit]
+
+    top_ids = [cid for cid, _ in ranked]
+    papers = {p.id: p for p in db.execute(select(Paper).where(Paper.id.in_(top_ids))).scalars().all()}
+    matches = []
+    for cid, dist in ranked:
+        p = papers.get(cid)
         if p:
-            scored.append({"paper": {"id": str(p.id), "title": p.title, "arxiv_id": p.arxiv_id},
-                           "genetic_distance": round(dist, 3)})
-    scored.sort(key=lambda x: x["genetic_distance"])
-    return {"paper_id": str(paper_id), "matches": scored[:limit]}
+            matches.append({"paper": {"id": str(p.id), "title": p.title, "arxiv_id": p.arxiv_id},
+                            "genetic_distance": round(dist, 3)})
+    return {"paper_id": str(paper_id), "matches": matches}

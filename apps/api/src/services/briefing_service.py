@@ -5,7 +5,7 @@ from src.models import WeeklyReport
 
 def _ser(r: WeeklyReport) -> dict:
     return {"id": str(r.id), "week_start": r.week_start.isoformat(), "week_end": r.week_end.isoformat(),
-            "total_papers": r.total_papers, "total_models": r.total_models,
+            "total_papers": r.total_papers, "total_models": r.total_models, "total_repos": r.total_repos,
             "briefing_json": r.briefing_json, "briefing_md": r.briefing_md,
             "generated_at": r.generated_at.isoformat() if r.generated_at else None,
             "is_published": r.is_published}

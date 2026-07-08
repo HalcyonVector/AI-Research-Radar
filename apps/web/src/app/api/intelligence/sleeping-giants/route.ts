@@ -4,5 +4,5 @@ import { proxyGet } from "@/lib/route-helpers";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  return proxyGet(req, "/intelligence/sleeping-giants", ["limit", "category"], { timeoutMs: 20000 });
+  return proxyGet(req, "/intelligence/sleeping-giants", ["limit", "offset", "category"], { timeoutMs: 20000 });
 }

@@ -53,8 +53,12 @@ export function ModelDetail({ model }: ModelDetailProps) {
               <Copy size={14} />
             </Button>
           </div>
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge>{model.model_type}</Badge>
+            {model.license && <Badge>{model.license}</Badge>}
+            {model.hf_org_name && (
+              <span className="text-xs text-[var(--text-tertiary)]">by {model.hf_org_name}</span>
+            )}
           </div>
         </div>
 
@@ -68,6 +72,19 @@ export function ModelDetail({ model }: ModelDetailProps) {
         <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
           {model.description}
         </p>
+      )}
+
+      {model.tags && model.tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {model.tags.slice(0, 12).map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-[var(--bg-elevated)] px-2 py-0.5 text-[11px] text-[var(--text-tertiary)]"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
       )}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

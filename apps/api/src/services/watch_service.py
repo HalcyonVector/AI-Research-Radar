@@ -18,35 +18,38 @@ def _serialize(w: TopicWatch) -> dict:
     }
 
 
-def list_watches(db: Session) -> dict:
-    rows = db.execute(select(TopicWatch).order_by(desc(TopicWatch.created_at))).scalars().all()
+def list_watches(db: Session, client_key: str) -> dict:
+    rows = db.execute(select(TopicWatch).where(TopicWatch.client_key == client_key)
+                      .order_by(desc(TopicWatch.created_at))).scalars().all()
     return {"data": [_serialize(w) for w in rows]}
 
 
-def create(db: Session, label: str, query: str | None = None, category_slug: str | None = None) -> dict:
-    w = TopicWatch(label=label, query=query, category_slug=category_slug)
+def create(db: Session, client_key: str, label: str, query: str | None = None,
+          category_slug: str | None = None) -> dict:
+    w = TopicWatch(client_key=client_key, label=label, query=query, category_slug=category_slug)
     db.add(w)
     db.commit()
     db.refresh(w)
     return _serialize(w)
 
 
-def delete(db: Session, watch_id: str) -> bool:
+def delete(db: Session, client_key: str, watch_id: str) -> bool:
     w = db.get(TopicWatch, watch_id)
-    if not w:
+    if not w or w.client_key != client_key:
         return False
     db.delete(w)
     db.commit()
     return True
 
 
-def digest(db: Session, watch_id: str) -> dict | None:
-    """Recent (last 14 days) papers matching the watch's category or query. Updates last_checked_at."""
+def digest(db: Session, client_key: str, watch_id: str) -> dict | None:
+    """Papers matching the watch's category/query published since it was last
+    checked (or the last 14 days, on the first-ever check). Updates last_checked_at."""
     w = db.get(TopicWatch, watch_id)
-    if not w:
+    if not w or w.client_key != client_key:
         return None
 
-    date_from = datetime.now(timezone.utc) - timedelta(days=14)
+    date_from = w.last_checked_at or (datetime.now(timezone.utc) - timedelta(days=14))
     result = paper_service.list_papers(
         db,
         q=w.query,

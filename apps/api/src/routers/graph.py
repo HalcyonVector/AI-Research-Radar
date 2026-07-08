@@ -26,5 +26,8 @@ def category_graph(slug: str, depth: int = 1, db: Session = Depends(get_db)):
     from sqlalchemy import select
     c = db.execute(select(ResearchCategory).where(ResearchCategory.slug == slug)).scalar_one_or_none()
     if not c:
+        # center_id is a node id (uuid) on every other path here - there's no
+        # matching node to report when the category doesn't exist, but nodes
+        # is empty too, so nothing ever compares against this fallback value.
         return {"nodes": [], "edges": [], "center_id": slug, "node_count": 0, "edge_count": 0}
     return graph_service.traverse(db, "category", str(c.id), depth)

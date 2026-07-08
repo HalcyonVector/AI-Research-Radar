@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { MousePointerClick, ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -10,28 +12,51 @@ import { Badge } from "@/components/ui/Badge";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { KnowledgeGraph } from "@/components/graph/KnowledgeGraph";
 import { nodeColor } from "@/components/graph/graphColors";
-import { useCategoryGraph, usePaperGraph } from "@/hooks/useGraph";
+import { useAuthorGraph, useCategoryGraph, usePaperGraph } from "@/hooks/useGraph";
 import { CATEGORIES, getCategory } from "@/lib/constants";
 import type { GraphNode } from "@/types/graph";
 
 const selectClass =
   "h-9 rounded-lg border border-[var(--border-base)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)]";
 
-type SeedType = "category" | "paper";
+type SeedType = "category" | "paper" | "author";
+
+// deep-link support: /graph?seed=paper&id=<uuid> (from a paper's "Open in
+// graph" button) or /graph?seed=author&id=<uuid> (from an author's page)
+function initialSeedFromUrl(params: URLSearchParams): { seedType: SeedType; id: string } {
+  const seed = params.get("seed");
+  const id = params.get("id") ?? "";
+  if ((seed === "paper" || seed === "author") && id) return { seedType: seed, id };
+  return { seedType: "category", id: "" };
+}
 
 export default function GraphPage() {
-  const [seedType, setSeedType] = useState<SeedType>("category");
+  return (
+    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+      <GraphPageInner />
+    </Suspense>
+  );
+}
+
+function GraphPageInner() {
+  const searchParams = useSearchParams();
+  const initial = initialSeedFromUrl(searchParams);
+
+  const [seedType, setSeedType] = useState<SeedType>(initial.seedType);
   const [selectedSlug, setSelectedSlug] = useState<string>(CATEGORIES[0]?.slug ?? "llms");
-  const [paperId, setPaperId] = useState<string>("");
+  const [paperId, setPaperId] = useState<string>(initial.seedType === "paper" ? initial.id : "");
+  const [authorId, setAuthorId] = useState<string>(initial.seedType === "author" ? initial.id : "");
   const [depth, setDepth] = useState<number>(2);
   const [selected, setSelected] = useState<GraphNode | null>(null);
 
   const categoryQuery = useCategoryGraph(selectedSlug, depth);
   const paperQuery = usePaperGraph(paperId, depth);
+  const authorQuery = useAuthorGraph(authorId, depth);
 
-  const active = seedType === "category" ? categoryQuery : paperQuery;
+  const active = seedType === "category" ? categoryQuery : seedType === "paper" ? paperQuery : authorQuery;
   const data = active.data;
-  const loading = seedType === "paper" && !paperId ? false : active.isLoading;
+  const seedId = seedType === "paper" ? paperId : seedType === "author" ? authorId : selectedSlug;
+  const loading = seedType !== "category" && !seedId ? false : active.isLoading;
   const error = active.isError;
 
   return (
@@ -53,6 +78,7 @@ export default function GraphPage() {
           >
             <option value="category">Seed: Category</option>
             <option value="paper">Seed: Paper</option>
+            <option value="author">Seed: Author</option>
           </select>
 
           {seedType === "category" ? (
@@ -71,7 +97,7 @@ export default function GraphPage() {
                 </option>
               ))}
             </select>
-          ) : (
+          ) : seedType === "paper" ? (
             <input
               className={`${selectClass} w-56`}
               placeholder="Paper ID…"
@@ -81,6 +107,17 @@ export default function GraphPage() {
                 setSelected(null);
               }}
               aria-label="Paper ID"
+            />
+          ) : (
+            <input
+              className={`${selectClass} w-56`}
+              placeholder="Author ID…"
+              value={authorId}
+              onChange={(e) => {
+                setAuthorId(e.target.value.trim());
+                setSelected(null);
+              }}
+              aria-label="Author ID"
             />
           )}
         </div>
@@ -141,6 +178,9 @@ function SelectedNodePanel({ node }: { node: GraphNode }) {
   } else if (node.type === "model") {
     href = `/models/${node.id}`;
     hrefLabel = "Open model";
+  } else if (node.type === "author") {
+    href = `/authors/${node.id}`;
+    hrefLabel = "Open author";
   }
 
   const catDef = node.category ? getCategory(node.category) : null;
