@@ -1,8 +1,10 @@
 import type { CategoryRef, Paper } from "./paper";
 
 export interface TrendScores {
-  growth: number;
-  momentum: number;
+  // null when there isn't yet enough ingestion history to compute a
+  // meaningful week-over-week ratio — distinct from a real, computed 0.
+  growth: number | null;
+  momentum: number | null;
   activity: number;
   adoption: number;
 }
@@ -32,8 +34,8 @@ export interface TrendsResponse {
 
 export interface TrendHistoryPoint {
   recorded_at: string;
-  growth: number;
-  momentum: number;
+  growth: number | null;
+  momentum: number | null;
   activity: number;
   adoption: number;
 }

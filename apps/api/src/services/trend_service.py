@@ -31,25 +31,31 @@ def list_trends(db: Session) -> dict:
         ) or 0
         out.append({
             "category": {"slug": c.slug, "name": c.name, "color": c.color_hex},
+            # growth/momentum are null (not 0) when the worker withheld them for lack
+            # of history (see trend_scores.MIN_HISTORY_DAYS) — distinct from a real,
+            # computed 0.
             "scores": {
-                "growth": (cur.growth_score if cur else 0) or 0,
-                "momentum": (cur.momentum_score if cur else 0) or 0,
+                "growth": cur.growth_score if cur else None,
+                "momentum": cur.momentum_score if cur else None,
                 "activity": (cur.activity_score if cur else 0) or 0,
                 "adoption": (cur.adoption_score if cur else 0) or 0,
             },
-            # null (not 0) when there's no prior weekly snapshot yet to diff against —
+            # null (not 0) when there's no prior weekly snapshot yet to diff against, or
+            # either snapshot's growth/momentum was itself withheld for lack of history —
             # "no history" and "genuinely flat" are different things the frontend
             # should render differently.
             "delta_7d": {
-                "growth": round(((cur.growth_score or 0) - (prev.growth_score or 0)), 1) if cur and prev else None,
-                "momentum": round(((cur.momentum_score or 0) - (prev.momentum_score or 0)), 1) if cur and prev else None,
+                "growth": round(cur.growth_score - prev.growth_score, 1)
+                if cur and prev and cur.growth_score is not None and prev.growth_score is not None else None,
+                "momentum": round(cur.momentum_score - prev.momentum_score, 1)
+                if cur and prev and cur.momentum_score is not None and prev.momentum_score is not None else None,
             },
             "papers_7d": papers_7d,
             "models_7d": (cur.model_count if cur else 0) or 0,
             "top_papers": [str(x) for x in (cur.top_paper_ids or [])] if cur else [],
             "sparkline": spark or [0],
         })
-    out.sort(key=lambda x: x["scores"]["growth"], reverse=True)
+    out.sort(key=lambda x: x["scores"]["growth"] if x["scores"]["growth"] is not None else -9999, reverse=True)
     return {"data": out, "generated_at": date.today().isoformat()}
 
 
