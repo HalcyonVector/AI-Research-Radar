@@ -106,6 +106,13 @@ export function SleepingGiantsPanel({ limit = 3, teaser = false }: SleepingGiant
           ))}
         </div>
       )}
+
+      {teaser && shown.length > 0 && shown[0].ai_rationale && (
+        <p className="mt-3 border-t border-[var(--border-base)] pt-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+          <span className="font-medium text-[var(--text-primary)]">Why {truncate(shown[0].paper?.title ?? "the top pick", 40)} is rising: </span>
+          {truncate(shown[0].ai_rationale, 140)}
+        </p>
+      )}
     </Card>
   );
 }
