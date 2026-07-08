@@ -259,6 +259,8 @@ cd infra/docker && docker compose up -d      # full stack incl. Ollama-backed AI
 
 On Render's free tier there's no always-on Celery worker/beat (`CELERY_EAGER=true` runs tasks in-process instead), so a GitHub Actions cron (`ingest-cron.yml`) drives ingestion, enrichment, and the weekly Layer-3/briefing jobs on a schedule instead of a paid worker.
 
+Separately, the free web service sleeps after ~15 min idle regardless of the ingestion cron (which only runs every 6h) — an external pinger (e.g. [cron-job.org](https://cron-job.org), free) hits `GET /health` every 10 min to keep it warm for real user traffic. No repo config needed; it's just a scheduled HTTP GET pointed at the deployed API.
+
 ### GitHub Actions (free "scheduler")
 Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a schedule and hits the internal ingest/enrich/recompute endpoints — a zero-cost replacement for a cron worker. Requires two repo secrets: `API_BASE_URL` and `API_SECRET_KEY`.
 
@@ -302,7 +304,7 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 **Solution:** The frontend has no mock/demo fallback — it only ever shows real data. If pages are empty or erroring, the API is unreachable. Set `API_BASE_URL` in `apps/web/.env.local` to your running backend and confirm `curl $API_BASE_URL/health` returns 200.
 
 ### Issue: Render service is slow on first load
-**Solution:** Free web services sleep after ~15 min idle and cold-start (~30–60s). The `ingest-cron.yml` workflow keeps it warm on a schedule.
+**Solution:** Free web services sleep after ~15 min idle and cold-start (~30–60s) — `entrypoint.sh` re-runs the Postgres wait, migrations, and seed step on every boot, so the first request after a sleep pays that full chain. `ingest-cron.yml` only pings every 6h, which isn't frequent enough to stop the sleep between user visits; a dedicated external pinger (cron-job.org or UptimeRobot, free) hitting `GET /health` every ~10 min keeps the service warm for actual traffic.
 
 ### Issue: Render deploy fails with "Out of memory (used over 512Mi)"
 **Solution:** The free tier's 512MB ceiling is tight for a stack that includes `sentence-transformers`/torch. Don't eagerly load ML models at FastAPI startup — keep them lazy-loaded on first use (the existing pattern in `src/ai/embeddings.py`), and give routes that may cold-load them a longer client-side timeout instead.
