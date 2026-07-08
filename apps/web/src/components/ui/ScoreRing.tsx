@@ -5,7 +5,7 @@ import { scoreColor } from "@/lib/constants";
 import { formatScore } from "@/lib/formatters";
 
 interface ScoreRingProps {
-  score: number;
+  score: number | null;
   size?: number;
   stroke?: number;
   label?: string;
@@ -78,7 +78,7 @@ export function ScoreRing({
               className="font-mono font-semibold tabular-nums"
               style={{ fontSize: size * 0.28, color }}
             >
-              {formatScore(display)}
+              {score === null ? "—" : formatScore(display)}
             </span>
           </div>
         )}

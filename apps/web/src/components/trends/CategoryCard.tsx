@@ -14,7 +14,7 @@ interface CategoryCardProps {
   index?: number;
 }
 
-function MiniStat({ label, value, color }: { label: string; value: number; color: string }) {
+function MiniStat({ label, value, color }: { label: string; value: number | null; color: string }) {
   const pct = Math.max(0, Math.min(100, value ?? 0));
   return (
     <div className="flex flex-col gap-1">
@@ -23,7 +23,7 @@ function MiniStat({ label, value, color }: { label: string; value: number; color
           {label}
         </span>
         <span className="font-mono text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
-          {formatScore(pct)}
+          {value === null ? "—" : formatScore(pct)}
         </span>
       </div>
       <div className="h-1 overflow-hidden rounded-full bg-[var(--border-base)]">
