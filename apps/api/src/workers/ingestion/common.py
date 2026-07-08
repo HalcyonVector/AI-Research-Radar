@@ -25,76 +25,74 @@ def get_or_create_org(db: Session, name: str) -> Organization:
     return o
 
 
-# Categories whose arxiv tags are a strict *subset* of a broader sibling's,
-# where the shared tag is a genuinely specific/dedicated arXiv category for
-# the narrow topic (cs.MA really does mean "Multiagent Systems" in arXiv's
-# own taxonomy) — the sibling always matches everything the narrow one does
-# plus more, so it always wins the raw tag-overlap scoring below, even for
-# papers that are specifically about the narrower sub-topic. This is the
-# opposite of the *compound* case (multimodal-ai={cs.CV,cs.CL} vs
-# computer-vision={cs.CV}/llms={cs.CL}), where the category requiring *more*
-# simultaneous tags is correctly the more specific one and should keep
-# winning via raw match count. Both are literal subset/superset tag
-# relationships, so no tag-count formula resolves them the same way — this
-# override list encodes which one is which.
+# Ordered keyword-based overrides, evaluated before raw tag-overlap scoring.
+# Each entry is (category_slug, required_tags, keywords): the category only
+# fires if at least one required tag is present in the paper AND at least
+# one keyword matches the title+abstract text.
 #
-# Each entry also requires a keyword hit, not just the tag subset: an early
-# version of this override fired on cs.MA alone, which turned out to route
-# *every* cs.AI+cs.MA paper to Multi-Agent Systems - including single-agent
-# papers where cs.MA was a secondary/incidental tag - leaving AI Agents with
-# zero papers (confirmed against production data). Requiring the text to
-# actually discuss multi-agent coordination keeps the override narrow: it
-# only overrides when the paper is genuinely about the narrower sub-topic,
-# not just tagged adjacent to it.
+# Two things forced these onto keywords instead of tag arithmetic:
 #
-# NOT included here: reasoning-models -> reinforcement-learning. cs.LG
-# ("Machine Learning") is arXiv's generic catch-all, not RL-specific — arXiv
-# has no dedicated RL category at all — so treating reinforcement-learning's
-# single cs.LG tag as "more specific" would make it swallow every
-# reasoning-models paper that also happens to carry cs.LG (i.e. nearly all
-# of them, since cs.LG is reasoning-models' own second tag). Unlike cs.MA,
-# a shared generic tag isn't a real specificity signal; RL is keyword-gated
-# below instead, same as the categories with no dedicated tag at all.
-BROADER_SIBLING_OVERRIDE: dict[str, tuple[str, list[str]]] = {
-    "ai-agents": ("multi-agent-systems", [
+# 1. No dedicated arXiv category exists at all (MCP is a 2024+ protocol;
+#    "evaluation" and "synthetic data" are cross-cutting techniques, not
+#    arXiv subfields) — each of these shares an *identical* arxiv_categories
+#    set with a sibling that would otherwise always win ties by display
+#    order (mcp-ecosystem == coding-agents == {cs.SE, cs.AI}; synthetic-data
+#    == reinforcement-learning == {cs.LG}; evaluation-frameworks ==
+#    reasoning-models == {cs.AI, cs.LG}).
+#
+# 2. AI Agents vs. Multi-Agent Systems: cs.MA is a real, specific arXiv tag,
+#    but tag-count scoring alone can't split this pair correctly either
+#    direction. An early attempt let Multi-Agent Systems win via a plain
+#    tag-subset override whenever cs.MA was present - checked against
+#    production data, papers tagged cs.MA (with or without cs.AI) turn out
+#    to *overwhelmingly* discuss multi-agent themes in their abstract even
+#    when their title doesn't - authors choose cs.MA deliberately, so
+#    "cs.MA present but no multi-agent keyword" is rare, not the common
+#    case that override was designed around. That left AI Agents with
+#    ~zero papers: there's no meaningful "spillover" from the Multi-Agent
+#    Systems pool to reclaim. AI Agents needs its own positive signal
+#    instead - general agent/tool-use language - and has to compete for the
+#    cs.AI-tagged pool the same way, since cs.AI alone is arXiv's generic
+#    catch-all and previously always resolved to whichever category came
+#    first in the tie-break (Reasoning Models), starving AI Agents from
+#    that path too.
+#
+# Order matters: multi-agent-systems and the no-tag categories are checked
+# before ai-agents, so a paper that also uses agent language (nearly all
+# multi-agent papers do) isn't stolen by the broader, generic-cs.AI bucket.
+KEYWORD_OVERRIDES: list[tuple[str, list[str], list[str]]] = [
+    ("multi-agent-systems", ["cs.MA"], [
         "multi-agent", "multi agent", "multiagent", "multiple agents",
         "agent coordination", "cooperative agents", "competing agents",
         "swarm of agents", "decentralized agents", "collaborative agents",
     ]),
-}
-
-# Categories where arXiv tags alone can't reliably identify the topic, either
-# because there's no dedicated arXiv category for it at all (MCP is a 2024+
-# protocol; "evaluation" and "synthetic data" are cross-cutting techniques,
-# not arXiv subfields) or because the only shared tag is too generic to be a
-# real specificity signal (see reinforcement-learning's note above). Each of
-# these also shares an *identical* arxiv_categories set with a sibling that
-# would otherwise always win ties by display order (mcp-ecosystem ==
-# coding-agents == {cs.SE, cs.AI}; synthetic-data == reinforcement-learning
-# == {cs.LG}; evaluation-frameworks == reasoning-models == {cs.AI, cs.LG}).
-# Detected via title/abstract keywords instead, gated on at least one of the
-# category's own arxiv tags still being present (so an unrelated paper that
-# happens to mention e.g. "synthetic data" in passing, but carries none of
-# these tags, doesn't get miscategorized).
-KEYWORD_CATEGORIES: dict[str, list[str]] = {
-    "mcp-ecosystem": [
+    ("mcp-ecosystem", ["cs.AI", "cs.SE"], [
+        # no bare "mcp" - too fragile as a standalone token (false-positives
+        # on any incidental appearance of the substring); every phrase here
+        # is specific enough that a false match would be very unlikely.
         "model context protocol", "mcp server", "mcp client", "mcp tool",
-        " mcp ", "tool-calling protocol",
-    ],
-    "reinforcement-learning": [
+        "mcp-based", "tool-calling protocol",
+    ]),
+    ("reinforcement-learning", ["cs.LG"], [
         "reinforcement learning", "policy gradient", "reward model",
         "q-learning", "actor-critic", "rlhf", "proximal policy optimization",
         "markov decision process", "reward shaping",
-    ],
-    "synthetic-data": [
+    ]),
+    ("synthetic-data", ["cs.LG"], [
         "synthetic data", "synthetic dataset", "synthetic datasets",
         "data synthesis", "synthetically generated",
-    ],
-    "evaluation-frameworks": [
+    ]),
+    ("evaluation-frameworks", ["cs.AI", "cs.LG"], [
         "evaluation framework", "evaluation benchmark", "benchmark suite",
         "evaluation protocol", "evaluation methodology", "evaluation suite",
-    ],
-}
+    ]),
+    ("ai-agents", ["cs.AI"], [
+        "llm agent", "autonomous agent", "ai agent", "agentic workflow",
+        "agentic system", "tool-use agent", "tool-calling agent",
+        "function-calling agent", "react agent", "planning agent",
+        "conversational agent", "agent framework", "tool-augmented agent",
+    ]),
+]
 
 
 def category_for_arxiv(
@@ -102,21 +100,14 @@ def category_for_arxiv(
 ) -> ResearchCategory | None:
     """Map a paper's arXiv categories to the best-matching research category.
 
-    Several of our categories deliberately share an arXiv tag with a broader
-    sibling (e.g. multi-agent-systems and ai-agents both claim cs.MA;
-    multimodal-ai and computer-vision/llms both claim cs.CV/cs.CL). The naive
-    "first category found, in table order" approach meant the broader sibling
-    always won — multi-agent-systems and multimodal-ai could never be assigned
-    as anyone's primary category, no matter how many matching papers existed.
-    Instead, pick the category whose arxiv_categories overlaps the *paper's*
-    tags the most (so a paper tagged both cs.CV and cs.CL lands in
-    Multimodal AI, not whichever single-domain category happens to be listed
-    first), tie-broken toward the more specific (fewer total tags) category,
-    then by the category's stable display order. BROADER_SIBLING_OVERRIDE
-    then fixes the subset-of-a-sibling cases that formula still gets
-    backwards (only when the text also corroborates it - see its docstring),
-    and KEYWORD_CATEGORIES catches the categories tag scoring can never reach
-    at all (see its docstring) via title/abstract text.
+    Checks KEYWORD_OVERRIDES first, in order (see its docstring for why six
+    of our fifteen categories need title/abstract text rather than tags
+    alone to be reachable at all). Falls back to pure tag-overlap scoring
+    for everything else: pick the category whose arxiv_categories overlaps
+    the *paper's* tags the most (so a paper tagged both cs.CV and cs.CL
+    lands in Multimodal AI, not whichever single-domain category happens to
+    be listed first), tie-broken toward the more specific (fewer total
+    tags) category, then by the category's stable display order.
     """
     cats = db.execute(select(ResearchCategory).order_by(ResearchCategory.display_order)).scalars().all()
     if not cats:
@@ -126,12 +117,13 @@ def category_for_arxiv(
 
     text = f"{title} {abstract}".lower()
     if text.strip():
-        for slug, keywords in KEYWORD_CATEGORIES.items():
+        for slug, required_tags, keywords in KEYWORD_OVERRIDES:
             cat = by_slug.get(slug)
             if not cat:
                 continue
-            cat_tags = set(cat.arxiv_categories or [])
-            if cat_tags & paper_tags and any(kw in text for kw in keywords):
+            if not (paper_tags & set(required_tags)):
+                continue
+            if any(kw in text for kw in keywords):
                 return cat
 
     best, best_key = None, None
@@ -143,17 +135,4 @@ def category_for_arxiv(
         key = (match_count, -len(cat_tags))
         if best_key is None or key > best_key:
             best, best_key = c, key
-    if best is None:
-        return cats[0]
-
-    override = BROADER_SIBLING_OVERRIDE.get(best.slug)
-    if override:
-        narrow_slug, narrow_keywords = override
-        narrow = by_slug.get(narrow_slug)
-        if narrow:
-            narrow_tags = set(narrow.arxiv_categories or [])
-            tag_ok = narrow_tags and narrow_tags <= paper_tags
-            keyword_ok = any(kw in text for kw in narrow_keywords)
-            if tag_ok and keyword_ok:
-                return narrow
-    return best
+    return best or cats[0]
