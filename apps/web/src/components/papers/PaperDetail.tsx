@@ -8,11 +8,49 @@ import { Button } from "@/components/ui/Button";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { BookmarkButton } from "@/components/ui/BookmarkButton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { AuthorLinks } from "@/components/papers/AuthorLinks";
 import { formatDate } from "@/lib/formatters";
 
 interface PaperDetailProps {
   paper: PaperDetailType;
+}
+
+// Mirrors the loaded header's shape (badge, title, meta row, abstract,
+// actions, score rings) so the page doesn't regrow once the paper loads.
+export function PaperDetailSkeleton() {
+  return (
+    <Card>
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <Skeleton className="mb-3 h-5 w-24 rounded-md" />
+          <Skeleton className="h-8 w-11/12" />
+          <Skeleton className="mt-2 h-8 w-2/3" />
+          <div className="mt-4 flex flex-wrap gap-4">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="mt-4 space-y-2">
+            <Skeleton className="h-3.5 w-full max-w-2xl" />
+            <Skeleton className="h-3.5 w-5/6 max-w-2xl" />
+          </div>
+          <div className="mt-5 flex gap-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col items-center gap-4">
+          <Skeleton className="h-[72px] w-[72px] rounded-full" />
+          <div className="flex gap-3">
+            <Skeleton className="h-14 w-14 rounded-full" />
+            <Skeleton className="h-14 w-14 rounded-full" />
+            <Skeleton className="h-14 w-14 rounded-full" />
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 export function PaperDetail({ paper }: PaperDetailProps) {

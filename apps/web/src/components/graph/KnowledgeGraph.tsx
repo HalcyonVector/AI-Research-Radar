@@ -21,6 +21,11 @@ interface KnowledgeGraphProps {
   selectedNodeId?: string | null;
   depth?: number;
   onDepthChange?: (n: number) => void;
+  // overrides the default "no connections" copy - e.g. when nothing has
+  // been searched/entered yet, "no data" reads as broken rather than
+  // "nothing to show until you pick something."
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 interface PhysicsNode {
@@ -49,6 +54,8 @@ export function KnowledgeGraph({
   selectedNodeId,
   depth,
   onDepthChange,
+  emptyTitle,
+  emptyDescription,
 }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -405,7 +412,10 @@ export function KnowledgeGraph({
   if (!data || nodes.length === 0) {
     return (
       <div className="flex w-full items-center justify-center" style={{ height }}>
-        <EmptyState title="No graph data" description="There are no connections to display for this selection." />
+        <EmptyState
+          title={emptyTitle ?? "No graph data"}
+          description={emptyDescription ?? "There are no connections to display for this selection."}
+        />
       </div>
     );
   }

@@ -3,6 +3,7 @@
 import { Quote, GitFork, Boxes, MessageCircle, type LucideIcon } from "lucide-react";
 import type { Paper } from "@/types/paper";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { formatCompact } from "@/lib/formatters";
 import { scoreColor } from "@/lib/constants";
 import { CitationChart } from "./CitationChart";
@@ -10,6 +11,36 @@ import { CitationChart } from "./CitationChart";
 interface PaperMetricsProps {
   paper: Paper;
   paperId: string;
+}
+
+// Mirrors PaperMetrics's shape (2x2 tile grid, 4 score bars, chart section) -
+// this panel needs the full Paper object, so unlike PaperChat/DNA/Related it
+// can't start rendering before the paper fetch resolves.
+export function PaperMetricsSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Metrics &amp; Momentum</CardTitle>
+      </CardHeader>
+      <div className="grid grid-cols-2 gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-lg" />
+        ))}
+      </div>
+      <div className="mt-4 space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i}>
+            <Skeleton className="mb-1 h-3 w-24" />
+            <Skeleton className="h-1.5 w-full rounded-full" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 border-t border-[var(--border-base)] pt-4">
+        <Skeleton className="mb-3 h-3 w-32" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    </Card>
+  );
 }
 
 function MetricTile({

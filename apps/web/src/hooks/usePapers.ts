@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { fetchJson } from "@/lib/client";
 import type {
   PaginatedResponse,
@@ -36,6 +36,10 @@ export function usePapers(params: PapersParams) {
       }),
     getNextPageParam: (last) =>
       last.pagination?.has_more ? last.pagination.cursor ?? undefined : undefined,
+    // keep showing the current results while a filter/sort change refetches,
+    // instead of flipping isLoading back to true and blanking the grid to a
+    // full skeleton on every interaction
+    placeholderData: keepPreviousData,
   });
 }
 

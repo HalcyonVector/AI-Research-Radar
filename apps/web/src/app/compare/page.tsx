@@ -59,10 +59,38 @@ function CompareBody({ ids }: { ids: string[] }) {
   }
 
   if (isLoading) {
+    const n = Math.max(1, ids.length);
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {ids.slice(0, 4).map((_, i) => (
-          <Skeleton key={i} className="h-96 w-full" />
+      <div
+        className="grid gap-px overflow-hidden border border-[var(--rule)] bg-[var(--rule)]"
+        style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
+      >
+        {Array.from({ length: n }).map((_, i) => (
+          <div key={i} className="flex flex-col gap-4 bg-[var(--bg-surface)] p-4">
+            <div>
+              <Skeleton className="h-5 w-20 rounded-md" />
+              <Skeleton className="mt-2 h-4 w-full" />
+              <Skeleton className="mt-1 h-3 w-2/3" />
+            </div>
+            <div className="flex items-center justify-center gap-3 border-y border-[var(--rule)] py-3">
+              <Skeleton className="h-[54px] w-[54px] rounded-full" />
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {Array.from({ length: 4 }).map((_, j) => (
+                <Skeleton key={j} className="h-3 w-full" />
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-1.5 w-full" />
+              <Skeleton className="h-1.5 w-full" />
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -156,6 +184,10 @@ function CompareInner() {
     .filter(Boolean)
     .slice(0, 4);
 
+  return <CompareBody ids={ids} />;
+}
+
+export default function ComparePage() {
   return (
     <div>
       <PageHeader
@@ -163,15 +195,9 @@ function CompareInner() {
         title="Compare Papers"
         description="Up to four papers, aligned on scores, adoption metrics, and conceptual DNA."
       />
-      <CompareBody ids={ids} />
+      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+        <CompareInner />
+      </Suspense>
     </div>
-  );
-}
-
-export default function ComparePage() {
-  return (
-    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-      <CompareInner />
-    </Suspense>
   );
 }

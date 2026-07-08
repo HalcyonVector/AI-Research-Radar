@@ -30,6 +30,35 @@ function inline(s: string): string {
   return s.replace(/\*\*(.+?)\*\*/g, '<strong class="text-[var(--text-primary)] font-semibold">$1</strong>');
 }
 
+// Mirrors the loaded page's shape (header, stat row, article card) instead of
+// a single opaque block, so the page doesn't visibly regrow once data lands.
+function BriefingDetailSkeleton() {
+  return (
+    <>
+      <div className="mb-1">
+        <Skeleton className="mb-2 h-3 w-32" />
+        <Skeleton className="h-7 w-2/3" />
+      </div>
+      <div className="flex flex-wrap gap-4">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <Card>
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-4/5" />
+          <Skeleton className="mt-4 h-5 w-1/4" />
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-3/4" />
+        </div>
+      </Card>
+    </>
+  );
+}
+
 export default function BriefingDetailPage() {
   const params = useParams<{ week: string }>();
   const week = params?.week as string;
@@ -46,7 +75,7 @@ export default function BriefingDetailPage() {
       </Link>
 
       {isLoading ? (
-        <Skeleton className="h-96 w-full rounded-xl" />
+        <BriefingDetailSkeleton />
       ) : isError || !data ? (
         <ErrorState onRetry={() => refetch()} />
       ) : (

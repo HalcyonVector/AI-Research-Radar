@@ -25,8 +25,45 @@ function Stat({ icon: Icon, value, label }: { icon: typeof FileText; value: numb
   );
 }
 
+// Mirrors the loaded hero card's shape (label row, title, subtitle, 3 stats)
+// so the card reserves its space instead of popping in above the grid once
+// useLatestBriefing() resolves.
+function LatestBriefingSkeleton() {
+  return (
+    <Card className="mb-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="w-full">
+          <Skeleton className="mb-2 h-3 w-28" />
+          <Skeleton className="h-6 w-2/3" />
+          <Skeleton className="mt-2 h-3.5 w-40" />
+          <div className="mt-3 flex flex-wrap gap-4">
+            <Skeleton className="h-3.5 w-16" />
+            <Skeleton className="h-3.5 w-16" />
+            <Skeleton className="h-3.5 w-16" />
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// Mirrors a loaded briefing card (week label, 2-line title, footer stat row).
+function BriefingCardSkeleton() {
+  return (
+    <Card className="flex h-full flex-col">
+      <Skeleton className="h-3 w-24" />
+      <Skeleton className="mt-2 h-4 w-full" />
+      <Skeleton className="mt-1.5 h-4 w-3/4" />
+      <div className="mt-3 flex flex-wrap gap-3 border-t border-[var(--border-base)] pt-3">
+        <Skeleton className="h-3.5 w-14" />
+        <Skeleton className="h-3.5 w-14" />
+      </div>
+    </Card>
+  );
+}
+
 export default function BriefingsPage() {
-  const { data: latest } = useLatestBriefing();
+  const { data: latest, isLoading: latestLoading } = useLatestBriefing();
   const { data, isLoading, isError, refetch } = useBriefings();
   const briefings = data ?? [];
 
@@ -38,35 +75,39 @@ export default function BriefingsPage() {
         description="AI-generated weekly syntheses of the most important developments across the ecosystem."
       />
 
-      {latest && (
-        <Link href={`/briefings/${weekSlug(latest)}`}>
-          <Card hover className="mb-6 bg-gradient-to-br from-[var(--bg-surface)] to-[var(--accent-subtle)]/30">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--accent-hover)]">
-                  <Newspaper size={13} />
-                  Latest briefing
+      {latestLoading ? (
+        <LatestBriefingSkeleton />
+      ) : (
+        latest && (
+          <Link href={`/briefings/${weekSlug(latest)}`}>
+            <Card hover className="mb-6 bg-gradient-to-br from-[var(--bg-surface)] to-[var(--accent-subtle)]/30">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[var(--accent-hover)]">
+                    <Newspaper size={13} />
+                    Latest briefing
+                  </div>
+                  <h2 className="text-xl font-semibold text-[var(--text-primary)]">{latest.title ?? "Weekly Briefing"}</h2>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                    Week of {formatDate(latest.week_start)}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-4">
+                    <Stat icon={FileText} value={latest.total_papers} label="papers" />
+                    <Stat icon={Box} value={latest.total_models} label="models" />
+                    <Stat icon={Package} value={latest.total_repos} label="repos" />
+                  </div>
                 </div>
-                <h2 className="text-xl font-semibold text-[var(--text-primary)]">{latest.title ?? "Weekly Briefing"}</h2>
-                <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  Week of {formatDate(latest.week_start)}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-4">
-                  <Stat icon={FileText} value={latest.total_papers} label="papers" />
-                  <Stat icon={Box} value={latest.total_models} label="models" />
-                  <Stat icon={Package} value={latest.total_repos} label="repos" />
-                </div>
+                <ArrowRight size={18} className="shrink-0 text-[var(--text-tertiary)]" />
               </div>
-              <ArrowRight size={18} className="shrink-0 text-[var(--text-tertiary)]" />
-            </div>
-          </Card>
-        </Link>
+            </Card>
+          </Link>
+        )
       )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-36 w-full rounded-xl" />
+            <BriefingCardSkeleton key={i} />
           ))}
         </div>
       ) : isError ? (

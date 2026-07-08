@@ -29,9 +29,27 @@ export default function Page({ params }: { params: { id: string } }) {
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : isLoading || !data ? (
-        <div className="space-y-4">
-          <Skeleton className="h-56 w-full rounded-xl" />
-          <Skeleton className="h-[340px] w-full rounded-xl" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Skeleton className="h-56 w-full rounded-xl" />
+            <Skeleton className="h-[340px] w-full rounded-xl" />
+          </div>
+          <aside className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Stats</CardTitle>
+                <TrendingUp size={16} className="text-[var(--text-tertiary)]" />
+              </CardHeader>
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <Skeleton className="h-3.5 w-20" />
+                    <Skeleton className="h-3.5 w-12" />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </aside>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

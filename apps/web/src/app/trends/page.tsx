@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { ErrorState } from "@/components/layout/ErrorState";
 import { RadarVisualization } from "@/components/trends/RadarVisualization";
-import { CategoryCard } from "@/components/trends/CategoryCard";
+import { CategoryCard, CategoryCardSkeleton } from "@/components/trends/CategoryCard";
 import { useTrends } from "@/hooks/useTrends";
 import type { Trend } from "@/types/trend";
 
@@ -42,7 +42,7 @@ export default function TrendsPage() {
           <Skeleton className="mb-8 h-[420px] w-full rounded-xl" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-64 w-full rounded-xl" />
+              <CategoryCardSkeleton key={i} />
             ))}
           </div>
         </>
