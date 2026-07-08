@@ -38,3 +38,28 @@ export function useDashboard() {
     queryFn: () => fetchJson<DashboardData>("/api/dashboard"),
   });
 }
+
+export interface RepoSummary {
+  id: string;
+  github_full_name: string;
+  name: string;
+  stars: number;
+  primary_language: string | null;
+  has_ai_summary: boolean;
+}
+
+export interface WhatsNewData {
+  window_days: number;
+  since: string;
+  counts: { papers: number; models: number; repos: number };
+  papers: Paper[];
+  models: Model[];
+  repos: RepoSummary[];
+}
+
+export function useWhatsNew(days = 7) {
+  return useQuery({
+    queryKey: ["dashboard-whats-new", days],
+    queryFn: () => fetchJson<WhatsNewData>("/api/dashboard/whats-new", { days }),
+  });
+}

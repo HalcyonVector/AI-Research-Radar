@@ -3,7 +3,7 @@
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BentoGrid, BentoCell } from "@/components/layout/BentoGrid";
 import { ErrorState } from "@/components/layout/ErrorState";
-import { useDashboard } from "@/hooks/useDashboard";
+import { useDashboard, useWhatsNew } from "@/hooks/useDashboard";
 import { TrendingPapersPanel } from "@/components/dashboard/TrendingPapersPanel";
 import { EmergingAreasPanel } from "@/components/dashboard/EmergingAreasPanel";
 import { StatsPanel } from "@/components/dashboard/StatsPanel";
@@ -12,10 +12,11 @@ import { BreakoutModelsPanel } from "@/components/dashboard/BreakoutModelsPanel"
 import { RecentlyAddedPanel } from "@/components/dashboard/RecentlyAddedPanel";
 import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
 import { SleepingGiantsPanel } from "@/components/dashboard/SleepingGiantsPanel";
-import { FrontierPredictorPanel } from "@/components/intelligence/FrontierPredictorPanel";
+import { RecentReposPanel } from "@/components/dashboard/RecentReposPanel";
 
 export default function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboard();
+  const { data: whatsNewData, isLoading: whatsNewLoading } = useWhatsNew(7);
 
   const trendingPapers = data?.trending_papers ?? [];
   const emergingCategories = data?.emerging_categories ?? [];
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const heatmapData = data?.heatmap_data ?? [];
   const stats = data?.stats ?? { papers: 0, models: 0, repos: 0, breakthroughs: 0 };
   const recentModels = data?.recently_added_models ?? [];
+  const recentRepos = whatsNewData?.repos ?? [];
 
   return (
     <div>
@@ -73,12 +75,12 @@ export default function DashboardPage() {
             <SleepingGiantsPanel teaser limit={3} />
           </BentoCell>
 
-          {/* Pairs with Sleeping Giants (both are "what's about to break out") and
-              fills what would otherwise be blank grid space next to it — also
-              the first place this Intelligence-engine feature shows up outside
-              its own page. */}
+          {/* Fills what would otherwise be blank grid space next to Sleeping
+              Giants, with a feature that has no page or panel anywhere else
+              in the app yet — GitHub repos are tracked and counted in the
+              stats tile, but were never actually surfaced. */}
           <BentoCell colSpan={2}>
-            <FrontierPredictorPanel limit={3} />
+            <RecentReposPanel repos={recentRepos} loading={whatsNewLoading} />
           </BentoCell>
         </BentoGrid>
       )}

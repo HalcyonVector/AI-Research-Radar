@@ -30,6 +30,14 @@ ENV PYTHONUNBUFFERED=1 \
     # Cache sentence-transformers / HF models in a writable, mountable location
     HF_HOME=/app/.cache/huggingface \
     SENTENCE_TRANSFORMERS_HOME=/app/.cache/huggingface \
+    # torch/numpy/scikit-learn's BLAS backends default to one thread per
+    # visible CPU core, each with its own memory overhead — over-allocates on
+    # a memory-constrained free-tier container. Cap at 1; this is a request-
+    # serving API, not a batch training job, so there's no throughput to buy.
+    OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1 \
     # Unlike uvicorn (which inserts cwd into sys.path itself when resolving an
     # "module:app" string), neither alembic nor celery do this automatically —
     # without this, `import src...` fails with ModuleNotFoundError the moment
