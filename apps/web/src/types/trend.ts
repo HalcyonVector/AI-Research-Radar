@@ -8,8 +8,11 @@ export interface TrendScores {
 }
 
 export interface TrendDelta {
-  growth: number;
-  momentum: number;
+  // null when there's no prior weekly snapshot yet to diff against (new
+  // category, or the app hasn't been running long enough) — distinct from a
+  // real, computed 0% (genuinely flat week-over-week).
+  growth: number | null;
+  momentum: number | null;
 }
 
 export interface Trend {

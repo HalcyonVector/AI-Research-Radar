@@ -72,3 +72,10 @@ export function authorList(authors: { name: string }[] | undefined, max = 3): st
   if (names.length <= max) return names.join(", ");
   return `${names.slice(0, max).join(", ")} +${names.length - max}`;
 }
+
+// "reasoning-models" -> "Reasoning Models". Used wherever a raw category slug
+// needs to be shown without a lookup match (e.g. the static CATEGORIES list
+// lagging the real backend-seeded categories).
+export function prettifySlug(slug: string): string {
+  return slug.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}

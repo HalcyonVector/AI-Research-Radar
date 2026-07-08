@@ -12,6 +12,7 @@ import { BreakoutModelsPanel } from "@/components/dashboard/BreakoutModelsPanel"
 import { RecentlyAddedPanel } from "@/components/dashboard/RecentlyAddedPanel";
 import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
 import { SleepingGiantsPanel } from "@/components/dashboard/SleepingGiantsPanel";
+import { FrontierPredictorPanel } from "@/components/intelligence/FrontierPredictorPanel";
 
 export default function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboard();
@@ -70,6 +71,14 @@ export default function DashboardPage() {
 
           <BentoCell colSpan={2}>
             <SleepingGiantsPanel teaser limit={3} />
+          </BentoCell>
+
+          {/* Pairs with Sleeping Giants (both are "what's about to break out") and
+              fills what would otherwise be blank grid space next to it — also
+              the first place this Intelligence-engine feature shows up outside
+              its own page. */}
+          <BentoCell colSpan={2}>
+            <FrontierPredictorPanel limit={3} />
           </BentoCell>
         </BentoGrid>
       )}

@@ -37,9 +37,12 @@ def list_trends(db: Session) -> dict:
                 "activity": (cur.activity_score if cur else 0) or 0,
                 "adoption": (cur.adoption_score if cur else 0) or 0,
             },
+            # null (not 0) when there's no prior weekly snapshot yet to diff against —
+            # "no history" and "genuinely flat" are different things the frontend
+            # should render differently.
             "delta_7d": {
-                "growth": round(((cur.growth_score or 0) - (prev.growth_score or 0)), 1) if cur and prev else 0,
-                "momentum": round(((cur.momentum_score or 0) - (prev.momentum_score or 0)), 1) if cur and prev else 0,
+                "growth": round(((cur.growth_score or 0) - (prev.growth_score or 0)), 1) if cur and prev else None,
+                "momentum": round(((cur.momentum_score or 0) - (prev.momentum_score or 0)), 1) if cur and prev else None,
             },
             "papers_7d": papers_7d,
             "models_7d": (cur.model_count if cur else 0) or 0,

@@ -23,13 +23,19 @@ def dashboard(db: Session) -> dict:
     latest = db.execute(select(WeeklyReport).where(WeeklyReport.is_published.is_(True))
                         .order_by(desc(WeeklyReport.week_start)).limit(1)).scalar_one_or_none()
 
-    # heatmap: papers per category over last 8 weeks
+    # heatmap: papers per category over last 8 weeks. Skip weeks that fall entirely
+    # before the earliest paper we've ever ingested — otherwise a young dataset
+    # renders as mostly-blank weeks that look like a broken/empty chart rather
+    # than "the app hasn't been running long enough to have that history".
     heatmap = []
+    earliest_published = db.scalar(select(func.min(Paper.published_at)))
     cats = db.execute(select(ResearchCategory).order_by(ResearchCategory.display_order).limit(8)).scalars().all()
     for c in cats:
         for w in range(8):
             start = date.today() - timedelta(days=(w + 1) * 7)
             end = date.today() - timedelta(days=w * 7)
+            if earliest_published and end <= earliest_published.date():
+                continue
             cnt = db.scalar(select(func.count()).select_from(Paper)
                             .where(Paper.primary_category_id == c.id,
                                    Paper.published_at >= start, Paper.published_at < end)) or 0
