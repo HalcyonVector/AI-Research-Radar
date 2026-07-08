@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ErrorState } from "@/components/layout/ErrorState";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { NarrativeCard } from "@/components/intelligence/NarrativeCard";
+import { NarrativeCard, NarrativeCardSkeleton } from "@/components/intelligence/NarrativeCard";
 import {
   useNarratives,
   useSleepingGiants,
@@ -30,7 +30,11 @@ function countDescendants(node?: GenealogyNode): number {
 }
 
 interface ExploreEntry {
-  href: string;
+  // null while the card's target isn't resolved yet (e.g. still waiting on a
+  // seed paper id) — rendered as a non-navigable card instead of being
+  // omitted from the grid, so the grid's shape/count is stable from first
+  // paint instead of cards popping in and reflowing everything around them.
+  href: string | null;
   title: string;
   desc: string;
   isLoading: boolean;
@@ -42,27 +46,33 @@ interface ExploreEntry {
 // "afterthought" links. Equal visual weight means people actually scan the
 // whole grid instead of stopping at whatever's above the fold.
 function ExploreCard({ entry }: { entry: ExploreEntry }) {
-  return (
+  const body = (
+    <Card hover={!!entry.href} className="flex h-full flex-col p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-[var(--text-primary)]">{entry.title}</p>
+        {entry.href && <ArrowUpRight size={14} className="mt-0.5 shrink-0 text-[var(--text-tertiary)]" />}
+      </div>
+      <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{entry.desc}</p>
+      <div className="mt-2.5 border-t border-[var(--border-base)] pt-2.5">
+        {entry.isLoading || !entry.href ? (
+          <Skeleton className="h-3 w-4/5" />
+        ) : entry.isError ? (
+          <p className="text-xs leading-relaxed text-[#ef4444]">Couldn&apos;t load — try again shortly</p>
+        ) : (
+          <p className="line-clamp-2 text-xs leading-relaxed text-[var(--text-tertiary)]">
+            {entry.teaser ?? "Not enough data yet"}
+          </p>
+        )}
+      </div>
+    </Card>
+  );
+
+  return entry.href ? (
     <Link href={entry.href} className="block h-full">
-      <Card hover className="flex h-full flex-col p-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">{entry.title}</p>
-          <ArrowUpRight size={14} className="mt-0.5 shrink-0 text-[var(--text-tertiary)]" />
-        </div>
-        <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{entry.desc}</p>
-        <div className="mt-2.5 border-t border-[var(--border-base)] pt-2.5">
-          {entry.isLoading ? (
-            <Skeleton className="h-3 w-4/5" />
-          ) : entry.isError ? (
-            <p className="text-xs leading-relaxed text-[#ef4444]">Couldn&apos;t load — try again shortly</p>
-          ) : (
-            <p className="line-clamp-2 text-xs leading-relaxed text-[var(--text-tertiary)]">
-              {entry.teaser ?? "Not enough data yet"}
-            </p>
-          )}
-        </div>
-      </Card>
+      {body}
     </Link>
+  ) : (
+    <div className="h-full cursor-default opacity-70">{body}</div>
   );
 }
 
@@ -127,39 +137,35 @@ export default function IntelligencePage() {
         ? `${topPred.category.name}: ${Math.round(topPred.explosion_probability * 100)}% chance in ~${topPred.horizon_weeks}w`
         : null,
     },
-    ...(seedPaperId
-      ? [
-          {
-            href: `/intelligence/propagation/${seedPaperId}`,
-            title: "Idea Propagation",
-            desc: "How an idea spread across the ecosystem",
-            isLoading: propLoading,
-            isError: propError,
-            teaser: propChain.length
-              ? `${propChain.length}-step trail traced from "${topPaper?.title}"`
-              : null,
-          },
-          {
-            href: `/intelligence/dna/${seedPaperId}`,
-            title: "Research DNA",
-            desc: "The conceptual makeup of a paper",
-            isLoading: dnaLoading,
-            isError: dnaError,
-            teaser: dnaComposition.length ? `Dominant concept: ${dnaComposition[0].concept}` : null,
-          },
-          {
-            href: `/intelligence/genealogy/${seedPaperId}`,
-            title: "Genealogy",
-            desc: "The lineage of an idea",
-            isLoading: genLoading,
-            isError: genError,
-            teaser:
-              ancestorCount > 0
-                ? `Traces back through ${ancestorCount} related paper${ancestorCount === 1 ? "" : "s"}`
-                : null,
-          },
-        ]
-      : []),
+    {
+      href: seedPaperId ? `/intelligence/propagation/${seedPaperId}` : null,
+      title: "Idea Propagation",
+      desc: "How an idea spread across the ecosystem",
+      isLoading: !seedPaperId || propLoading,
+      isError: propError,
+      teaser: propChain.length
+        ? `${propChain.length}-step trail traced from "${topPaper?.title}"`
+        : null,
+    },
+    {
+      href: seedPaperId ? `/intelligence/dna/${seedPaperId}` : null,
+      title: "Research DNA",
+      desc: "The conceptual makeup of a paper",
+      isLoading: !seedPaperId || dnaLoading,
+      isError: dnaError,
+      teaser: dnaComposition.length ? `Dominant concept: ${dnaComposition[0].concept}` : null,
+    },
+    {
+      href: seedPaperId ? `/intelligence/genealogy/${seedPaperId}` : null,
+      title: "Genealogy",
+      desc: "The lineage of an idea",
+      isLoading: !seedPaperId || genLoading,
+      isError: genError,
+      teaser:
+        ancestorCount > 0
+          ? `Traces back through ${ancestorCount} related paper${ancestorCount === 1 ? "" : "s"}`
+          : null,
+    },
     {
       href: "/intelligence/collaborations",
       title: "Collaboration Clusters",
@@ -234,11 +240,7 @@ export default function IntelligencePage() {
 
       {narrativeLoading ? (
         <div className="mb-5">
-          <Card className="flex flex-col">
-            <Skeleton className="mb-3 h-4 w-1/3" />
-            <Skeleton className="mb-2 h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-          </Card>
+          <NarrativeCardSkeleton />
         </div>
       ) : narrativeError ? (
         <div className="mb-5">
@@ -256,7 +258,7 @@ export default function IntelligencePage() {
       </h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {entries.map((e) => (
-          <ExploreCard key={e.href} entry={e} />
+          <ExploreCard key={e.title} entry={e} />
         ))}
       </div>
     </div>

@@ -2,12 +2,50 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { BookOpen, ArrowUpRight } from "lucide-react";
+import { BookOpen, ArrowUpRight, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { formatDate, prettifySlug } from "@/lib/formatters";
 import { getCategory } from "@/lib/constants";
 import type { Narrative } from "@/types/intelligence";
+
+// Mirrors NarrativeCard's actual layout (not a generic bar stack) so there's
+// no shape/height jump when the real narrative arrives, plus a "generating"
+// cue since this is an LLM synthesis step, not a plain data fetch.
+export function NarrativeCardSkeleton() {
+  return (
+    <Card className="flex flex-col">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles size={15} className="animate-pulse text-[var(--accent-hover)]" />
+          <span className="text-sm font-semibold text-[var(--text-primary)]">
+            Synthesizing ecosystem narrative
+            <span className="inline-flex w-4 animate-pulse">…</span>
+          </span>
+        </div>
+        <Skeleton className="h-3 w-28" />
+      </div>
+
+      <div className="space-y-2">
+        <Skeleton className="h-3.5 w-full" />
+        <Skeleton className="h-3.5 w-full" />
+        <Skeleton className="h-3.5 w-4/5" />
+      </div>
+
+      <div className="mt-4 border-t border-[var(--border-base)] pt-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+          Referenced
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <Skeleton className="h-5 w-24 rounded-full" />
+          <Skeleton className="h-5 w-32 rounded-full" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 function entityHref(e: { type: string; id: string }): string {
   if (e.type === "paper") return `/papers/${e.id}`;
