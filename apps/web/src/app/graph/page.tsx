@@ -137,6 +137,12 @@ function GraphPageInner() {
               selectedNodeId={selected?.id ?? null}
               depth={depth}
               onDepthChange={setDepth}
+              emptyTitle={seedType !== "category" && !seedId ? "Enter an ID to explore" : undefined}
+              emptyDescription={
+                seedType !== "category" && !seedId
+                  ? `Type a ${seedType} ID above to see its connections in the graph.`
+                  : undefined
+              }
             />
           </Card>
         </div>

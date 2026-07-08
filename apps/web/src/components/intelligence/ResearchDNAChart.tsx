@@ -62,7 +62,7 @@ function DonutSegment({
 }
 
 export function ResearchDNAChart({ paperId }: ResearchDNAChartProps) {
-  const { data, isLoading, isError } = useDNA(paperId);
+  const { data, isLoading, isError, refetch } = useDNA(paperId);
   const composition: DNAComponent[] = data?.composition ?? [];
   const total = composition.reduce((acc, c) => acc + (c.weight || 0), 0);
 
@@ -93,7 +93,7 @@ export function ResearchDNAChart({ paperId }: ResearchDNAChartProps) {
           </div>
         </div>
       ) : isError ? (
-        <ErrorState compact />
+        <ErrorState compact onRetry={() => refetch()} />
       ) : composition.length === 0 ? (
         <EmptyState
           icon={Dna}

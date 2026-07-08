@@ -6,8 +6,36 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { CategoryBadge } from "@/components/ui/CategoryBadge";
 import { GrowthBadge } from "@/components/ui/GrowthBadge";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getCategory } from "@/lib/constants";
 import { formatCompact, formatScore } from "@/lib/formatters";
+
+// Mirrors CategoryCard's actual layout (badge + icon, sparkline, 4 mini-stat
+// bars, footer) instead of a single opaque box, so the trends grid doesn't
+// reflow when real cards replace the skeletons.
+export function CategoryCardSkeleton() {
+  return (
+    <Card className="flex h-full flex-col">
+      <CardHeader className="mb-3">
+        <Skeleton className="h-5 w-28 rounded-md" />
+        <Skeleton className="h-8 w-8 rounded-lg" />
+      </CardHeader>
+      <Skeleton className="mb-4 h-10 w-full" />
+      <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex flex-col gap-1">
+            <Skeleton className="h-2.5 w-3/5" />
+            <Skeleton className="h-1 w-full rounded-full" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-auto flex items-center justify-between border-t border-[var(--border-base)] pt-3">
+        <Skeleton className="h-3.5 w-10" />
+        <Skeleton className="h-3.5 w-14" />
+      </div>
+    </Card>
+  );
+}
 
 interface CategoryCardProps {
   trend: Trend;

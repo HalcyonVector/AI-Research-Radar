@@ -53,10 +53,14 @@ export function PropagationChain({ seedId }: { seedId: string }) {
       <CardHeader>
         <CardTitle>Idea Propagation</CardTitle>
       </CardHeader>
-      {data?.seed && (
-        <p className="-mt-2 mb-4 text-xs text-[var(--text-tertiary)]">
-          Tracing how <span className="text-[var(--text-secondary)]">{data.seed.label}</span> spread across the ecosystem.
-        </p>
+      {isLoading ? (
+        <Skeleton className="-mt-2 mb-4 h-3.5 w-2/3" />
+      ) : (
+        data?.seed && (
+          <p className="-mt-2 mb-4 text-xs text-[var(--text-tertiary)]">
+            Tracing how <span className="text-[var(--text-secondary)]">{data.seed.label}</span> spread across the ecosystem.
+          </p>
+        )
       )}
 
       {isLoading ? (

@@ -22,7 +22,7 @@ export default function CategoryTrendPage({ params }: { params: { category: stri
   const Icon = def.icon;
 
   const { data: trend, isLoading: trendLoading, isError: trendError, refetch } = useTrend(slug);
-  const scores = trend?.scores ?? { growth: 0, momentum: 0, activity: 0, adoption: 0 };
+  const scores = trend?.scores;
 
   const {
     data: papersData,
@@ -70,16 +70,16 @@ export default function CategoryTrendPage({ params }: { params: { category: stri
         ) : (
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             <div className="flex flex-col items-center">
-              <ScoreRing score={scores.growth} label="Growth" animate={!trendLoading} />
+              <ScoreRing score={scores?.growth ?? null} label="Growth" animate={!trendLoading} />
             </div>
             <div className="flex flex-col items-center">
-              <ScoreRing score={scores.momentum} label="Momentum" animate={!trendLoading} />
+              <ScoreRing score={scores?.momentum ?? null} label="Momentum" animate={!trendLoading} />
             </div>
             <div className="flex flex-col items-center">
-              <ScoreRing score={scores.activity} label="Activity" animate={!trendLoading} />
+              <ScoreRing score={scores?.activity ?? null} label="Activity" animate={!trendLoading} />
             </div>
             <div className="flex flex-col items-center">
-              <ScoreRing score={scores.adoption} label="Adoption" animate={!trendLoading} />
+              <ScoreRing score={scores?.adoption ?? null} label="Adoption" animate={!trendLoading} />
             </div>
           </div>
         )}

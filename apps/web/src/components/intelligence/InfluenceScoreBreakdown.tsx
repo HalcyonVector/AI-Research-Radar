@@ -5,6 +5,7 @@ import { useInfluence } from "@/hooks/useIntelligence";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { scoreColor } from "@/lib/constants";
 
@@ -18,7 +19,7 @@ const LABELS: Record<string, string> = {
 };
 
 export function InfluenceScoreBreakdown({ paperId }: { paperId: string }) {
-  const { data, isLoading } = useInfluence(paperId);
+  const { data, isLoading, isError, refetch } = useInfluence(paperId);
 
   return (
     <Card>
@@ -38,6 +39,8 @@ export function InfluenceScoreBreakdown({ paperId }: { paperId: string }) {
             ))}
           </div>
         </div>
+      ) : isError ? (
+        <ErrorState compact onRetry={() => refetch()} />
       ) : !data ? (
         <EmptyState compact title="No influence data" description="This paper's influence hasn't been scored yet." />
       ) : (

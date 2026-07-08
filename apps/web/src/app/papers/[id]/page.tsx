@@ -5,13 +5,12 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { usePaper } from "@/hooks/usePapers";
 import { TwoColumnLayout } from "@/components/layout/BentoGrid";
-import { PaperDetail } from "@/components/papers/PaperDetail";
+import { PaperDetail, PaperDetailSkeleton } from "@/components/papers/PaperDetail";
 import { PaperChat } from "@/components/papers/PaperChat";
 import { AISummaryPanel } from "@/components/papers/AISummaryPanel";
-import { PaperMetrics } from "@/components/papers/PaperMetrics";
+import { PaperMetrics, PaperMetricsSkeleton } from "@/components/papers/PaperMetrics";
 import { RelatedPapers } from "@/components/papers/RelatedPapers";
 import { ResearchDNAChart } from "@/components/intelligence/ResearchDNAChart";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function PaperDetailPage() {
@@ -29,29 +28,24 @@ export default function PaperDetailPage() {
         Back to Papers
       </Link>
 
-      {isLoading ? (
-        <div className="space-y-6">
-          <Skeleton className="h-64 w-full rounded-xl" />
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <Skeleton className="h-96 w-full rounded-xl lg:col-span-2" />
-            <Skeleton className="h-96 w-full rounded-xl" />
-          </div>
-        </div>
-      ) : isError || !paper ? (
+      {isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : (
         <>
-          <PaperDetail paper={paper} />
+          {paper ? <PaperDetail paper={paper} /> : <PaperDetailSkeleton />}
           <TwoColumnLayout
             main={
+              // Chat/DNA/Related only need the id (already known from the URL),
+              // so they fetch and show their own skeletons immediately instead
+              // of waiting on the paper fetch to finish first.
               <>
-                <AISummaryPanel summary={paper.ai_summary} />
+                <AISummaryPanel summary={paper?.ai_summary} loading={isLoading} />
                 <PaperChat paperId={id} />
                 <ResearchDNAChart paperId={id} />
                 <RelatedPapers paperId={id} />
               </>
             }
-            aside={<PaperMetrics paper={paper} paperId={id} />}
+            aside={paper ? <PaperMetrics paper={paper} paperId={id} /> : <PaperMetricsSkeleton />}
           />
         </>
       )}
