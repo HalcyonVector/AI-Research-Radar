@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.middleware.auth import require_admin
 from src.services import apikey_service
+from src.utils.joblock import job_lock, JobLockedError
 
 router = APIRouter(prefix="/internal", tags=["internal"], dependencies=[Depends(require_admin)])
 
@@ -13,12 +14,21 @@ class ApiKeyCreate(BaseModel):
     name: str
 
 
+def _locked_conflict(e: JobLockedError) -> HTTPException:
+    return HTTPException(409, f"{e} - CELERY_EAGER runs these in-process; wait for it to "
+                               "finish (check GET /internal/jobs/status) before retrying.")
+
+
 @router.post("/ingest/trigger")
 def ingest_trigger():
     from src.workers.ingestion import arxiv, huggingface, github
-    arxiv.run.delay()
-    huggingface.run.delay()
-    github.run.delay()
+    try:
+        with job_lock("ingest_trigger"):
+            arxiv.run.delay()
+            huggingface.run.delay()
+            github.run.delay()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
     return {"status": "queued", "pipelines": ["arxiv", "huggingface", "github"]}
 
 
@@ -30,14 +40,18 @@ def ingest_enrich():
     from src.workers.scoring import paper_scores, trend_scores, model_scores
     from src.workers.intelligence import orchestrate
     from src.workers.graph import edge_builder
-    semantic_scholar.run.delay()
-    openalex.run.delay()
-    social.run.delay()
-    paper_scores.run_all.delay()
-    trend_scores.run.delay()
-    model_scores.run.delay()
-    edge_builder.rebuild.delay()
-    orchestrate.run_daily.delay()
+    try:
+        with job_lock("ingest_enrich"):
+            semantic_scholar.run.delay()
+            openalex.run.delay()
+            social.run.delay()
+            paper_scores.run_all.delay()
+            trend_scores.run.delay()
+            model_scores.run.delay()
+            edge_builder.rebuild.delay()
+            orchestrate.run_daily.delay()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
     return {"status": "queued", "jobs": ["semantic_scholar", "openalex_affiliations", "social",
                                           "paper_scores", "trend_scores", "model_scores",
                                           "graph_edges", "intelligence_daily"]}
@@ -51,29 +65,45 @@ def categories_backfill():
     Runs synchronously under CELERY_EAGER - expect this to take a while for a
     large corpus; safe to re-trigger if the request times out client-side."""
     from src.workers.maintenance import backfill_categories
-    return backfill_categories.run()
+    try:
+        with job_lock("categories_backfill"):
+            return backfill_categories.run()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
 
 
 @router.post("/scores/recompute")
 def scores_recompute():
     from src.workers.scoring import paper_scores, trend_scores
-    paper_scores.run_all.delay()
-    trend_scores.run.delay()
+    try:
+        with job_lock("scores_recompute"):
+            paper_scores.run_all.delay()
+            trend_scores.run.delay()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
     return {"status": "queued", "jobs": ["paper_scores", "trend_scores"]}
 
 
 @router.post("/briefing/generate")
 def briefing_generate():
     from src.workers.ai import briefing
-    briefing.generate.delay()
+    try:
+        with job_lock("briefing_generate"):
+            briefing.generate.delay()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
     return {"status": "queued", "job": "weekly_briefing"}
 
 
 @router.post("/intelligence/recompute")
 def intelligence_recompute():
     from src.workers.intelligence import orchestrate
-    orchestrate.run_daily.delay()
-    orchestrate.run_weekly.delay()
+    try:
+        with job_lock("intelligence_recompute"):
+            orchestrate.run_daily.delay()
+            orchestrate.run_weekly.delay()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
     return {"status": "queued", "job": "intelligence_engine"}
 
 

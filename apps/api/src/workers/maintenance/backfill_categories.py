@@ -25,7 +25,7 @@ papers are left untouched either way.
 import time
 import logging
 import feedparser
-from sqlalchemy import select
+from sqlalchemy import select, func
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper, PaperCategory
@@ -50,23 +50,43 @@ def _fetch_categories_batch(arxiv_ids: list[str]) -> dict[str, list[str]]:
 
 @celery_app.task(name="workers.maintenance.backfill_categories.run")
 def run() -> dict:
+    """Keyset-paginated over Paper.id (UUID, so ordering is arbitrary but stable
+    and complete - not time-ordered, but every row is visited exactly once).
+
+    Deliberately avoids `select(Paper)...all()` for the whole corpus: on the
+    512MB free-tier instance, materializing every paper (each carrying its
+    384-dim abstract_embedding) as ORM objects at once was a standing OOM risk
+    that got worse every week as the corpus grew. Each batch is committed and
+    then expunged from the session's identity map (db.expunge_all()) so only
+    one batch's worth of objects is ever resident - a plain commit() is not
+    enough on its own since SQLAlchemy still holds the identity map.
+    """
     db = session_scope()
     try:
-        papers = db.execute(select(Paper).where(Paper.arxiv_id.isnot(None))).scalars().all()
-        logger.info("backfill_categories: %d papers with an arxiv_id to check", len(papers))
+        total = db.execute(select(func.count()).select_from(Paper).where(Paper.arxiv_id.isnot(None))).scalar_one()
+        logger.info("backfill_categories: %d papers with an arxiv_id to check", total)
 
         checked = 0
         changed = 0
         failed_batches = 0
+        last_id = None
 
-        for i in range(0, len(papers), BATCH_SIZE):
-            batch = papers[i : i + BATCH_SIZE]
+        while True:
+            query = select(Paper).where(Paper.arxiv_id.isnot(None))
+            if last_id is not None:
+                query = query.where(Paper.id > last_id)
+            batch = db.execute(query.order_by(Paper.id).limit(BATCH_SIZE)).scalars().all()
+            if not batch:
+                break
+            last_id = batch[-1].id
+
             time.sleep(3)  # arXiv TOS
             try:
                 cats_by_id = _fetch_categories_batch([p.arxiv_id for p in batch])
             except Exception:
                 failed_batches += 1
-                logger.exception("backfill_categories: batch at offset %d failed, skipping", i)
+                logger.exception("backfill_categories: batch after id %s failed, skipping", last_id)
+                db.expunge_all()
                 continue
 
             for p in batch:
@@ -88,8 +108,9 @@ def run() -> dict:
                 changed += 1
 
             db.commit()
+            db.expunge_all()
             logger.info("backfill_categories: %d/%d checked, %d recategorized so far",
-                       checked, len(papers), changed)
+                       checked, total, changed)
 
         result = {"checked": checked, "recategorized": changed, "failed_batches": failed_batches}
         logger.info("backfill_categories: done - %s", result)
