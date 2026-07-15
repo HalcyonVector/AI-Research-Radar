@@ -1,4 +1,14 @@
-"""Intelligence pipeline orchestrator (spec 5.8)."""
+"""Intelligence pipeline orchestrator (spec 5.8).
+
+run_weekly() below is NOT called by the free-tier path anymore. Under
+CELERY_EAGER=true, chaining its 6 jobs in one process caused the recurring
+"exceeded its memory limit" OOM restarts on the 512MB API dyno (see
+routers.internal.intelligence_weekly_job, which the ingest-cron workflow now
+calls once per job instead). run_weekly() is kept only for a future non-eager
+setup with a real, separately-provisioned Celery worker (paid plan), where
+.delay() would actually enqueue to Redis instead of running inline - do not
+wire it back into the free-tier /internal/* router.
+"""
 from src.celery_app import celery_app
 
 
