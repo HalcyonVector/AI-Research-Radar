@@ -71,15 +71,36 @@ jobs:
           curl -fsS --retry 5 --retry-all-errors --retry-delay 15 \
             "${API_BASE_URL}/health" || echo "health warmup failed (continuing)"
 
-      - name: Full Layer-3 recompute (propagation, genealogy, cross-pollination, evolution, collaboration, frontier)
+      - name: Daily Layer-3 recompute (DNA, breakthrough)
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
         run: |
-          curl -fsS --max-time 1800 -X POST \
+          curl -fsS --max-time 300 -X POST \
             -H "Authorization: Bearer ${API_SECRET_KEY}" \
             "${API_BASE_URL}/api/v1/internal/intelligence/recompute" \
-            && echo "" && echo "intelligence recompute triggered" || echo "intelligence recompute failed/timed out (continuing)"
+            && echo "" && echo "daily recompute triggered" || echo "daily recompute failed/timed out (continuing)"
+
+      # These 6 used to be one chained call to /intelligence/recompute, which
+      # ran all of them back-to-back inside a single ~30min request on the
+      # 512MB free-tier dyno (CELERY_EAGER runs jobs in-process) - that's what
+      # was causing the periodic "exceeded its memory limit" restarts. Each
+      # is now its own request so the process gets a chance to release the
+      # previous job's memory before the next one starts. If one step fails
+      # or times out, the rest still run - safe to re-trigger individually
+      # via workflow_dispatch or a direct POST to /intelligence/weekly/{job}.
+      - name: "Layer-3 weekly: propagation, genealogy, cross-pollination, evolution, collaboration, frontier"
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          for job in propagation genealogy cross-pollination evolution collaboration frontier; do
+            echo "--- ${job} ---"
+            curl -fsS --max-time 400 -X POST \
+              -H "Authorization: Bearer ${API_SECRET_KEY}" \
+              "${API_BASE_URL}/api/v1/internal/intelligence/weekly/${job}" \
+              && echo "" && echo "${job} triggered" || echo "${job} failed/timed out (continuing)"
+          done
 
       - name: Generate weekly briefing
         env:
