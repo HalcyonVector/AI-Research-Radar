@@ -6,6 +6,7 @@ from src.database import get_db
 from src.middleware.auth import require_admin
 from src.services import apikey_service
 from src.utils.joblock import job_lock, JobLockedError
+from src.utils.memcleanup import release_job_memory
 
 router = APIRouter(prefix="/internal", tags=["internal"], dependencies=[Depends(require_admin)])
 
@@ -29,6 +30,8 @@ def ingest_trigger():
             github.run.delay()
     except JobLockedError as e:
         raise _locked_conflict(e)
+    finally:
+        release_job_memory()
     return {"status": "queued", "pipelines": ["arxiv", "huggingface", "github"]}
 
 
@@ -52,6 +55,8 @@ def ingest_enrich():
             orchestrate.run_daily.delay()
     except JobLockedError as e:
         raise _locked_conflict(e)
+    finally:
+        release_job_memory()
     return {"status": "queued", "jobs": ["semantic_scholar", "openalex_affiliations", "social",
                                           "paper_scores", "trend_scores", "model_scores",
                                           "graph_edges", "intelligence_daily"]}
@@ -70,6 +75,8 @@ def categories_backfill():
             return backfill_categories.run()
     except JobLockedError as e:
         raise _locked_conflict(e)
+    finally:
+        release_job_memory()
 
 
 @router.post("/scores/recompute")
@@ -81,6 +88,8 @@ def scores_recompute():
             trend_scores.run.delay()
     except JobLockedError as e:
         raise _locked_conflict(e)
+    finally:
+        release_job_memory()
     return {"status": "queued", "jobs": ["paper_scores", "trend_scores"]}
 
 
@@ -92,19 +101,67 @@ def briefing_generate():
             briefing.generate.delay()
     except JobLockedError as e:
         raise _locked_conflict(e)
+    finally:
+        release_job_memory()
     return {"status": "queued", "job": "weekly_briefing"}
 
 
 @router.post("/intelligence/recompute")
 def intelligence_recompute():
+    """Daily Layer-3 only (DNA, breakthrough) - light enough to run as one job.
+    For the weekly jobs (propagation, genealogy, cross-pollination, evolution,
+    collaboration, frontier) use POST /intelligence/weekly/{job} once each, not
+    this endpoint - see the module docstring on why they're no longer chained
+    together here."""
     from src.workers.intelligence import orchestrate
     try:
         with job_lock("intelligence_recompute"):
             orchestrate.run_daily.delay()
-            orchestrate.run_weekly.delay()
     except JobLockedError as e:
         raise _locked_conflict(e)
-    return {"status": "queued", "job": "intelligence_engine"}
+    finally:
+        release_job_memory()
+    return {"status": "queued", "job": "intelligence_daily"}
+
+
+WEEKLY_INTELLIGENCE_JOBS = [
+    "propagation", "genealogy", "cross-pollination", "evolution", "collaboration", "frontier",
+]
+
+
+@router.post("/intelligence/weekly/{job}")
+def intelligence_weekly_job(job: str):
+    """Run exactly one weekly Layer-3 job (see WEEKLY_INTELLIGENCE_JOBS).
+
+    These used to be chained in one process via orchestrate.run_weekly() -
+    under CELERY_EAGER that meant 6 heavy jobs (one of which builds a
+    networkx graph, another trains a model) executing back-to-back inside a
+    single ~30min HTTP request on this 512MB free-tier dyno, with no gap for
+    garbage collection between them. That's what was causing the periodic
+    "exceeded its memory limit" restarts. Call this endpoint once per job
+    (the ingest-cron workflow now does exactly that) so each job gets its own
+    request and its garbage is collected before the next one starts."""
+    from src.workers.intelligence import (
+        propagation, genealogy, cross_pollination, evolution, collaboration, frontier,
+    )
+    jobs = {
+        "propagation": propagation.build_idea_propagation_chains,
+        "genealogy": genealogy.build_research_genealogy,
+        "cross-pollination": cross_pollination.detect_cross_pollination,
+        "evolution": evolution.update_evolution_timelines,
+        "collaboration": collaboration.detect_collaboration_clusters,
+        "frontier": frontier.train_and_score_frontier_predictor,
+    }
+    if job not in jobs:
+        raise HTTPException(404, f"unknown weekly job '{job}', expected one of {WEEKLY_INTELLIGENCE_JOBS}")
+    try:
+        with job_lock(f"intelligence_weekly_{job}"):
+            jobs[job].delay()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
+    finally:
+        release_job_memory()
+    return {"status": "queued", "job": job}
 
 
 @router.post("/api-keys")
