@@ -40,25 +40,36 @@ jobs:
           curl -fsS --retry 5 --retry-all-errors --retry-delay 15 \
             "${API_BASE_URL}/health" || echo "health warmup failed (continuing)"
 
+      # Same fix as the weekly Layer-3 job below: this used to be 2 bundled
+      # calls (/ingest/trigger, /ingest/enrich) chaining 3 then 8 heavy jobs
+      # back-to-back in one process. It runs every 6h - far more often than
+      # the weekly chain - so it's the more likely cause of any recurrence.
+      # Each job now gets its own request.
       - name: Trigger ingestion (arXiv / HF / GitHub)
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
         run: |
-          curl -fsS --max-time 300 -X POST \
-            -H "Authorization: Bearer ${API_SECRET_KEY}" \
-            "${API_BASE_URL}/api/v1/internal/ingest/trigger" \
-            && echo "" && echo "ingest triggered" || echo "ingest trigger failed (continuing)"
+          for job in arxiv huggingface github; do
+            echo "--- ${job} ---"
+            curl -fsS --max-time 300 -X POST \
+              -H "Authorization: Bearer ${API_SECRET_KEY}" \
+              "${API_BASE_URL}/api/v1/internal/ingest/trigger/${job}" \
+              && echo "" && echo "${job} triggered" || echo "${job} failed/timed out (continuing)"
+          done
 
       - name: Enrich + rescore (citations, affiliations, social, graph edges, daily Layer-3)
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
         run: |
-          curl -fsS --max-time 1800 -X POST \
-            -H "Authorization: Bearer ${API_SECRET_KEY}" \
-            "${API_BASE_URL}/api/v1/internal/ingest/enrich" \
-            && echo "" && echo "enrich triggered" || echo "enrich failed/timed out (continuing, safe to retry next run)"
+          for job in semantic-scholar openalex social paper-scores trend-scores model-scores graph-edges intelligence-daily; do
+            echo "--- ${job} ---"
+            curl -fsS --max-time 400 -X POST \
+              -H "Authorization: Bearer ${API_SECRET_KEY}" \
+              "${API_BASE_URL}/api/v1/internal/ingest/enrich/${job}" \
+              && echo "" && echo "${job} triggered" || echo "${job} failed/timed out (continuing, safe to retry next run)"
+          done
 
   weekly-intelligence-and-briefing:
     if: github.event.schedule == '0 3 * * 1' || github.event_name == 'workflow_dispatch'
