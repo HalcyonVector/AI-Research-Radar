@@ -22,6 +22,9 @@ def _locked_conflict(e: JobLockedError) -> HTTPException:
 
 @router.post("/ingest/trigger")
 def ingest_trigger():
+    """Bundled manual/admin trigger - kept for convenience. The ingest-cron
+    workflow calls POST /ingest/trigger/{job} once per pipeline instead (see
+    that endpoint's docstring for why)."""
     from src.workers.ingestion import arxiv, huggingface, github
     try:
         with job_lock("ingest_trigger"):
@@ -35,10 +38,36 @@ def ingest_trigger():
     return {"status": "queued", "pipelines": ["arxiv", "huggingface", "github"]}
 
 
+INGEST_TRIGGER_JOBS = ["arxiv", "huggingface", "github"]
+
+
+@router.post("/ingest/trigger/{job}")
+def ingest_trigger_job(job: str):
+    """Run exactly one ingestion pipeline (see INGEST_TRIGGER_JOBS)."""
+    from src.workers.ingestion import arxiv, huggingface, github
+    jobs = {"arxiv": arxiv.run, "huggingface": huggingface.run, "github": github.run}
+    if job not in jobs:
+        raise HTTPException(404, f"unknown ingest job '{job}', expected one of {INGEST_TRIGGER_JOBS}")
+    try:
+        with job_lock(f"ingest_trigger_{job}"):
+            jobs[job].delay()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
+    finally:
+        release_job_memory()
+    return {"status": "queued", "job": job}
+
+
 @router.post("/ingest/enrich")
 def ingest_enrich():
-    """Run after ingestion: backfill citations + affiliations + social mentions + graph
-    edges, then rescore + daily Layer 3 (DNA, breakthrough)."""
+    """Bundled manual/admin trigger - kept for convenience, but do NOT wire
+    this back into a cron: backfill citations + affiliations + social
+    mentions + graph edges + rescore + daily Layer 3, all chained in one
+    ~30min request, is exactly the pattern that caused the recurring
+    "exceeded its memory limit" restarts (same root cause as
+    orchestrate.run_weekly - see routers.internal.intelligence_weekly_job).
+    Use POST /ingest/enrich/{job} once per job instead; the ingest-cron
+    workflow already does."""
     from src.workers.ingestion import semantic_scholar, social, openalex
     from src.workers.scoring import paper_scores, trend_scores, model_scores
     from src.workers.intelligence import orchestrate
@@ -60,6 +89,47 @@ def ingest_enrich():
     return {"status": "queued", "jobs": ["semantic_scholar", "openalex_affiliations", "social",
                                           "paper_scores", "trend_scores", "model_scores",
                                           "graph_edges", "intelligence_daily"]}
+
+
+INGEST_ENRICH_JOBS = [
+    "semantic-scholar", "openalex", "social", "paper-scores",
+    "trend-scores", "model-scores", "graph-edges", "intelligence-daily",
+]
+
+
+@router.post("/ingest/enrich/{job}")
+def ingest_enrich_job(job: str):
+    """Run exactly one enrich/rescore job (see INGEST_ENRICH_JOBS).
+
+    This chain runs every 6 hours (far more often than the weekly
+    intelligence chain), and every job in it has the same unbounded-query
+    shape that caused the weekly OOM - it just hadn't been split yet. Call
+    this once per job so each gets its own request and its garbage is
+    collected before the next one starts."""
+    from src.workers.ingestion import semantic_scholar, social, openalex
+    from src.workers.scoring import paper_scores, trend_scores, model_scores
+    from src.workers.intelligence import orchestrate
+    from src.workers.graph import edge_builder
+    jobs = {
+        "semantic-scholar": semantic_scholar.run,
+        "openalex": openalex.run,
+        "social": social.run,
+        "paper-scores": paper_scores.run_all,
+        "trend-scores": trend_scores.run,
+        "model-scores": model_scores.run,
+        "graph-edges": edge_builder.rebuild,
+        "intelligence-daily": orchestrate.run_daily,
+    }
+    if job not in jobs:
+        raise HTTPException(404, f"unknown enrich job '{job}', expected one of {INGEST_ENRICH_JOBS}")
+    try:
+        with job_lock(f"ingest_enrich_{job}"):
+            jobs[job].delay()
+    except JobLockedError as e:
+        raise _locked_conflict(e)
+    finally:
+        release_job_memory()
+    return {"status": "queued", "job": job}
 
 
 @router.post("/categories/backfill")
