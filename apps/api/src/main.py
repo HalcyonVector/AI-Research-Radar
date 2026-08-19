@@ -6,6 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.config import settings
 from src.middleware.rate_limit import rate_limit_middleware
+from src.database import is_up as db_up
 from src.redis_client import is_up as redis_up
 from src.routers import (
     papers, trends, models, search, dashboard, graph, briefings, intelligence, internal,
@@ -26,7 +27,16 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "environment": settings.environment, "redis": redis_up()}
+        # Both checks matter independently: Redis (Upstash) has its own free-tier
+        # command quota, and the DB (Supabase) has its own 7-day inactivity
+        # auto-pause -- neither keeps the other awake, so both need a real touch
+        # on every ping, not just Render's dyno staying warm.
+        return {
+            "status": "ok",
+            "environment": settings.environment,
+            "redis": redis_up(),
+            "database": db_up(),
+        }
 
     api = "/api/v1"
     app.include_router(papers.router, prefix=api)
