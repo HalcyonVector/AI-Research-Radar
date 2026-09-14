@@ -26,6 +26,7 @@ def create_app() -> FastAPI:
     app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limit_middleware)
 
     @app.get("/health")
+    @app.head("/health")
     def health():
         # Both checks matter independently: Redis (Upstash) has its own free-tier
         # command quota, and the DB (Supabase) has its own 7-day inactivity
