@@ -32,7 +32,13 @@ def _embed_gemini(texts: list[str]) -> list[list[float]]:
             "https://generativelanguage.googleapis.com/v1beta/models/"
             f"text-embedding-004:embedContent?key={settings.gemini_api_key}"
         )
-        r = requests.post(url, json={"content": {"parts": [{"text": t}]}}, timeout=60)
+        # outputDimensionality (MRL truncation) keeps this at settings.embedding_dim
+        # (384) so it drops into the existing pgvector column with no migration,
+        # even though text-embedding-004's native output is larger.
+        r = requests.post(url, json={
+            "content": {"parts": [{"text": t}]},
+            "outputDimensionality": settings.embedding_dim,
+        }, timeout=60)
         r.raise_for_status()
         out.append(r.json()["embedding"]["values"])
     return out

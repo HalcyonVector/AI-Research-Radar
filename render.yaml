@@ -50,7 +50,14 @@ services:
       - key: GEMINI_MODEL
         value: gemini-2.0-flash
       - key: EMBEDDING_PROVIDER
-        value: local          # sentence-transformers, 384d (no external cost)
+        value: gemini          # text-embedding-004, truncated to 384d via
+                                # outputDimensionality (see src/ai/embeddings.py).
+                                # NOT "local": sentence-transformers needs PyTorch,
+                                # whose import alone can burn 100-300MB+ on first
+                                # use -- confirmed crashing the free-tier 512MB
+                                # instance mid-ingestion (process-level 502, not a
+                                # clean app error) once ingestion actually had real
+                                # papers to embed instead of an empty backlog.
       - key: EMBEDDING_DIM
         value: "384"
       # ---- Secrets: set these in the Render dashboard (sync:false) ----
