@@ -302,3 +302,41 @@ def jobs_status():
         return {"workers": list(active.keys()), "active_tasks": {k: len(v) for k, v in active.items()}}
     except Exception as e:
         return {"workers": [], "error": str(e)}
+
+
+@router.get("/jobs/lock")
+def jobs_lock_status():
+    """Who (if anyone) currently holds the global job_lock, and whether it's
+    just a normal in-flight job or one that's likely stuck (a crashed/OOM-killed
+    process never reaches job_lock's own `finally` release, so its lock just
+    sits there until the 40-min TTL expires on its own -- see utils/joblock.py).
+    This endpoint only reports; use POST /internal/jobs/unlock to actually
+    clear it."""
+    from src.redis_client import redis_client
+    from src.utils.joblock import LOCK_KEY
+    try:
+        holder = redis_client.get(LOCK_KEY)
+        ttl = redis_client.ttl(LOCK_KEY) if holder else None
+    except Exception as e:
+        return {"locked": None, "error": str(e)}
+    return {"locked": bool(holder), "holder": holder, "ttl_seconds": ttl}
+
+
+@router.post("/jobs/unlock")
+def jobs_unlock():
+    """Force-clear the global job_lock. Only use this once you're confident the
+    holder shown by GET /internal/jobs/lock actually crashed rather than being
+    a legitimately long-running job (a wrongly-cleared lock lets two heavy jobs
+    stack in the same 512MB process, the exact thing the lock exists to
+    prevent) -- e.g. check ttl_seconds is still close to the 2400s default
+    (meaning it was acquired recently) vs. a genuinely stuck one from several
+    minutes ago with no sign of the corresponding GH Actions step ever
+    completing."""
+    from src.redis_client import redis_client
+    from src.utils.joblock import LOCK_KEY
+    try:
+        holder = redis_client.get(LOCK_KEY)
+        redis_client.delete(LOCK_KEY)
+    except Exception as e:
+        raise HTTPException(500, f"could not clear lock: {e}")
+    return {"status": "unlocked", "previous_holder": holder}
