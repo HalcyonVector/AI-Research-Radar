@@ -132,6 +132,45 @@ def ingest_enrich_job(job: str):
     return {"status": "queued", "job": job}
 
 
+CRAWL_JOBS = ["huggingface", "github"]
+
+
+@router.post("/ingest/crawl/{job}")
+def ingest_crawl_job(job: str, target: int | None = None):
+    """One-shot deep pull for huggingface or github (see CRAWL_JOBS).
+
+    The recurring `/ingest/trigger/{job}` only calls each source's *light*
+    run() — page 1 of a few queries/sorts, which keeps already-tracked rows'
+    stats fresh but (per those modules' own docstrings) "barely grows the
+    corpus" since the same top results dominate page 1 run after run. crawl()
+    paginates deep enough to actually grow the tracked set; it just was never
+    wired to an endpoint before, which is the direct explanation for why so
+    few new repos/models were showing up despite ingestion "working". Meant
+    to be triggered manually/occasionally (e.g. once after a long ingestion
+    gap), not added to the recurring 6-hourly schedule -- it's a much bigger,
+    slower pull than the light run().
+
+    Optional `target` overrides each module's own default (huggingface:
+    target total models; github: target_per_query) -- omit to use those
+    defaults.
+    """
+    from src.workers.ingestion import huggingface, github
+    jobs = {"huggingface": huggingface.crawl, "github": github.crawl}
+    if job not in jobs:
+        raise HTTPException(404, f"unknown crawl job '{job}', expected one of {CRAWL_JOBS}")
+    kwargs = {}
+    if target is not None:
+        kwargs = {"target": target} if job == "huggingface" else {"target_per_query": target}
+    try:
+        with job_lock(f"ingest_crawl_{job}"):
+            jobs[job].delay(**kwargs)
+    except JobLockedError as e:
+        raise _locked_conflict(e)
+    finally:
+        release_job_memory()
+    return {"status": "queued", "job": f"{job}_crawl"}
+
+
 @router.post("/categories/backfill")
 def categories_backfill():
     """Recompute primary_category for existing papers with the current
