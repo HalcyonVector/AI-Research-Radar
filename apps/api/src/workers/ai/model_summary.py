@@ -1,5 +1,6 @@
 """AI summary generation for Hugging Face models — provider-agnostic."""
 import json
+import logging
 import requests
 from datetime import datetime, timezone
 from src.celery_app import celery_app
@@ -9,11 +10,16 @@ from src.ai.llm import complete_json, model_name, LLMError
 from src.ai.prompts import MODEL_SUMMARY_PROMPT
 from src.ai.content_fetch import fetch_hf_card
 
+logger = logging.getLogger(__name__)
+
 REQUIRED = {"what_it_is", "capabilities", "use_cases", "notable"}
 
 
 @celery_app.task(name="workers.ai.model_summary.generate", bind=True, max_retries=3)
 def generate(self, model_id: str):
+    """Called inline from huggingface ingestion for every qualifying new
+    model -- see workers.ai.summary.generate's docstring for why failures
+    here just log and return instead of calling self.retry()."""
     db = session_scope()
     try:
         m = db.get(Model, model_id)
@@ -43,6 +49,8 @@ def generate(self, model_id: str):
             return {"ok": True}
         except (json.JSONDecodeError, ValueError, LLMError,
                 requests.exceptions.RequestException) as e:
-            raise self.retry(exc=e, countdown=min(2 ** self.request.retries * 15, 120))
+            logger.warning("model_summary.generate: failed for model %s, will retry next ingestion pass: %s",
+                           model_id, e)
+            return {"failed": True, "error": str(e)}
     finally:
         db.close()

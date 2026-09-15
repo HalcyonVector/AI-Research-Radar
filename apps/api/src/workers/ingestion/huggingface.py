@@ -107,15 +107,26 @@ def upsert_model(db, md: dict, seen: set) -> bool:
 
 @celery_app.task(name="workers.ingestion.huggingface.run", bind=True, max_retries=3)
 def run(self, limit: int = LIMIT):
-    """Recurring light ingest: top-`limit` by downloads/likes/lastModified."""
+    """Recurring light ingest: top-`limit` by downloads/likes/lastModified.
+
+    Per-sort retry is a plain bounded loop with a real sleep, not
+    self.retry() -- see workers.ingestion.github.crawl's docstring for why."""
+    import time
     seen, upserted = set(), 0
     db = session_scope()
     try:
         for sort in SORT_BY:
-            try:
-                models = fetch_models(sort, limit)
-            except Exception as exc:
-                raise self.retry(exc=exc, countdown=min(2 ** self.request.retries * 2, 64))
+            models = None
+            for attempt in range(3):
+                try:
+                    models = fetch_models(sort, limit)
+                    break
+                except Exception as exc:
+                    if attempt == 2:
+                        logger.warning("huggingface.run: giving up on sort %r after 3 attempts: %s", sort, exc)
+                        models = []
+                        break
+                    time.sleep(min(2 * 2 ** attempt, 30))
             for md in models:
                 if upsert_model(db, md, seen):
                     upserted += 1

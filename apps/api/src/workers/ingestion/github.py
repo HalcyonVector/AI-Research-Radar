@@ -114,15 +114,29 @@ def upsert_repo(db, rd: dict) -> bool:
 
 @celery_app.task(name="workers.ingestion.github.run", bind=True, max_retries=3)
 def run(self):
-    """Recurring light check: page 1 of each query, every 12h."""
+    """Recurring light check: page 1 of each query, every 12h.
+
+    Per-query retry is a plain bounded loop with a real sleep, not
+    self.retry() -- see crawl()'s docstring above for why. Also spaces
+    queries out the same way crawl() now does, rather than firing all 3
+    back-to-back."""
     upserted = 0
     db = session_scope()
     try:
-        for query in QUERIES:
-            try:
-                repos = search_repos(query)
-            except Exception as exc:
-                raise self.retry(exc=exc, countdown=min(2 ** self.request.retries * 2, 64))
+        for qi, query in enumerate(QUERIES):
+            if qi:
+                _rate_limit_sleep()
+            repos = None
+            for attempt in range(3):
+                try:
+                    repos = search_repos(query)
+                    break
+                except Exception as exc:
+                    if attempt == 2:
+                        logger.warning("github.run: giving up on query %r after 3 attempts: %s", query, exc)
+                        repos = []
+                        break
+                    time.sleep(min(5 * 2 ** attempt, 60))
             for rd in repos:
                 if upsert_repo(db, rd):
                     upserted += 1

@@ -1,4 +1,5 @@
 """arXiv ingestion pipeline (spec 5.2)."""
+import logging
 import time
 import feedparser
 from datetime import datetime, timezone
@@ -9,6 +10,8 @@ from src.models import Paper, PaperAuthor, PaperCategory
 from src.redis_client import redis_client
 from src.utils.text import normalize_whitespace
 from src.workers.ingestion.common import get_or_create_author, category_for_arxiv
+
+logger = logging.getLogger(__name__)
 
 ARXIV_URL = "http://export.arxiv.org/api/query"
 CATEGORIES = ["cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.NE", "cs.RO", "stat.ML", "eess.AS", "cs.IR", "cs.MA"]
@@ -65,14 +68,30 @@ def _parse_dt(s: str | None):
 
 @celery_app.task(name="workers.ingestion.arxiv.run", bind=True, max_retries=3)
 def run(self, max_results: int = MAX_RESULTS):
+    """Per-category retry is a plain bounded loop with a real sleep, not
+    self.retry() -- see workers.ingestion.github.crawl's docstring for why:
+    self.retry() misbehaves when invoked synchronously via .delay() with no
+    real Celery worker/broker behind it (this whole deployment runs
+    CELERY_EAGER=true), and raising it from inside a request handler produced
+    an unexplained 502 the one time that path actually got exercised. A
+    failed category here just gets skipped for this run rather than
+    aborting the other 9 categories behind it."""
     ingested = 0
     db = session_scope()
     try:
         for category in CATEGORIES:
-            try:
-                papers = fetch_recent(category, max_results)
-            except Exception as exc:
-                raise self.retry(exc=exc, countdown=min(2 ** self.request.retries * 2, 64))
+            papers = None
+            for attempt in range(3):
+                try:
+                    papers = fetch_recent(category, max_results)
+                    break
+                except Exception as exc:
+                    if attempt == 2:
+                        logger.warning("arxiv.run: giving up on category %r after 3 attempts: %s",
+                                       category, exc)
+                        papers = []
+                        break
+                    time.sleep(min(2 * 2 ** attempt, 30))
             for pd in papers:
                 if not pd["arxiv_id"] or _seen(pd["arxiv_id"]):
                     continue

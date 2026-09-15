@@ -1,13 +1,19 @@
 """Embedding generation (spec 5.6) — local sentence-transformers by default."""
+import logging
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper
 from src.ai.embeddings import embed_texts
 from sqlalchemy import select
 
+logger = logging.getLogger(__name__)
+
 
 @celery_app.task(name="workers.ai.embedding.generate", bind=True, max_retries=3)
 def generate(self, paper_id: str):
+    """Called inline from arxiv ingestion for every new paper -- see
+    workers.ai.summary.generate's docstring for why failures here just log
+    and return instead of calling self.retry()."""
     db = session_scope()
     try:
         paper = db.get(Paper, paper_id)
@@ -19,7 +25,9 @@ def generate(self, paper_id: str):
             db.commit()
             return {"ok": True, "dim": len(vec)}
         except Exception as e:
-            raise self.retry(exc=e, countdown=30)
+            logger.warning("embedding.generate: failed for paper %s, will retry next ingestion pass: %s",
+                           paper_id, e)
+            return {"failed": True, "error": str(e)}
     finally:
         db.close()
 
