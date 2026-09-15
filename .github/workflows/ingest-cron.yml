@@ -36,7 +36,7 @@ on:
           first). Leave as "none" for a normal manual run of the regular jobs.
         type: choice
         default: none
-        options: [none, github, huggingface, both, unlock]
+        options: [none, github, huggingface, both, unlock, arxiv]
       crawl_target:
         description: "Optional target override for the crawl (blank = each module's own default)"
         type: string
@@ -173,8 +173,19 @@ jobs:
             "${API_BASE_URL}/api/v1/internal/jobs/unlock"
           echo ""
 
+      - name: Trigger arxiv only (isolated test path)
+        if: inputs.crawl_job == 'arxiv'
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          curl -fsS --max-time 300 -X POST \
+            -H "Authorization: Bearer ${API_SECRET_KEY}" \
+            "${API_BASE_URL}/api/v1/internal/ingest/trigger/arxiv" \
+            && echo "" && echo "arxiv triggered" || echo "arxiv failed/timed out"
+
       - name: Crawl
-        if: inputs.crawl_job != 'unlock'
+        if: inputs.crawl_job != 'unlock' && inputs.crawl_job != 'arxiv'
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
