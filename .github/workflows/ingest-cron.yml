@@ -31,11 +31,12 @@ on:
       crawl_job:
         description: >-
           One-shot deep-pull crawl instead of the regular ingest+enrich/weekly
-          run (see manual-crawl job below). Leave as "none" for a normal
-          manual run of the regular jobs.
+          run (see manual-crawl job below). "unlock" force-clears the global
+          job_lock if a crashed job left it stuck (check GET /internal/jobs/lock
+          first). Leave as "none" for a normal manual run of the regular jobs.
         type: choice
         default: none
-        options: [none, github, huggingface, both]
+        options: [none, github, huggingface, both, unlock]
       crawl_target:
         description: "Optional target override for the crawl (blank = each module's own default)"
         type: string
@@ -153,7 +154,27 @@ jobs:
           curl -fsS --retry 5 --retry-all-errors --retry-delay 15 \
             "${API_BASE_URL}/health" || echo "health warmup failed (continuing)"
 
+      - name: Check job lock
+        if: inputs.crawl_job == 'unlock'
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          curl -fsS -H "Authorization: Bearer ${API_SECRET_KEY}" "${API_BASE_URL}/api/v1/internal/jobs/lock"
+          echo ""
+
+      - name: Unlock
+        if: inputs.crawl_job == 'unlock'
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+        run: |
+          curl -fsS -X POST -H "Authorization: Bearer ${API_SECRET_KEY}" \
+            "${API_BASE_URL}/api/v1/internal/jobs/unlock"
+          echo ""
+
       - name: Crawl
+        if: inputs.crawl_job != 'unlock'
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
