@@ -1,4 +1,5 @@
 """Hugging Face model ingestion (spec 5.3)."""
+import logging
 from datetime import date
 import requests
 from sqlalchemy import select, func
@@ -7,6 +8,8 @@ from src.database import session_scope
 from src.models import Model, ModelDownloadHistory, Paper
 from src.config import settings
 from src.utils.text import extract_arxiv_ids
+
+logger = logging.getLogger(__name__)
 
 HF_API = "https://huggingface.co/api/models"
 SORT_BY = ["downloads", "likes", "lastModified"]
@@ -124,16 +127,37 @@ def run(self, limit: int = LIMIT):
 @celery_app.task(name="workers.ingestion.huggingface.crawl", bind=True, max_retries=3)
 def crawl(self, target: int = 25000, sort: str = "downloads"):
     """One-shot big crawl: paginate `sort` order until `target` models are tracked.
-    Upserts each and enqueues its summary. Safe to re-run (idempotent upserts)."""
+    Upserts each and enqueues its summary. Safe to re-run (idempotent upserts).
+
+    Per-page retry is a plain bounded loop with a real sleep, not self.retry()
+    -- same fix as github.crawl() (see its docstring for why): this whole
+    free-tier deployment runs Celery in CELERY_EAGER (in-process, synchronous)
+    mode with no real worker/broker behind it, so self.retry()'s
+    queue-requeue semantics don't apply cleanly here, and calling it from a
+    request handler produced an unexplained 502 in github.crawl()'s case.
+    Also adds a small delay between pages, matching github.py's rate-limit
+    spacing -- this crawl had none at all before."""
+    import time
     seen, upserted = set(), 0
     db = session_scope()
     try:
         url = None
+        first = True
         while upserted < target:
-            try:
-                page, nxt = _fetch_page(sort=sort, url=url)
-            except Exception as exc:
-                raise self.retry(exc=exc, countdown=min(2 ** self.request.retries * 5, 120))
+            if not first:
+                time.sleep(1)
+            first = False
+            page = None
+            for attempt in range(3):
+                try:
+                    page, nxt = _fetch_page(sort=sort, url=url)
+                    break
+                except Exception as exc:
+                    if attempt == 2:
+                        logger.warning("huggingface.crawl: giving up after 3 attempts: %s", exc)
+                        page, nxt = [], None
+                        break
+                    time.sleep(min(5 * 2 ** attempt, 60))
             if not page:
                 break
             for md in page:
