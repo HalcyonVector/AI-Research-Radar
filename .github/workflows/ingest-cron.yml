@@ -27,10 +27,23 @@ on:
     - cron: "0 */6 * * *"    # every 6 hours (UTC): ingest + enrich/rescoring
     - cron: "0 3 * * 1"      # weekly, Monday 03:00 UTC: full Layer-3 + briefing
   workflow_dispatch:          # allow manual runs
+    inputs:
+      crawl_job:
+        description: >-
+          One-shot deep-pull crawl instead of the regular ingest+enrich/weekly
+          run (see manual-crawl job below). Leave as "none" for a normal
+          manual run of the regular jobs.
+        type: choice
+        default: none
+        options: [none, github, huggingface, both]
+      crawl_target:
+        description: "Optional target override for the crawl (blank = each module's own default)"
+        type: string
+        default: ""
 
 jobs:
   ingest-and-enrich:
-    if: github.event.schedule == '0 */6 * * *' || github.event_name == 'workflow_dispatch'
+    if: github.event.schedule == '0 */6 * * *' || (github.event_name == 'workflow_dispatch' && inputs.crawl_job == 'none')
     runs-on: ubuntu-latest
     steps:
       - name: Warm the (possibly sleeping) free Render service
@@ -72,7 +85,7 @@ jobs:
           done
 
   weekly-intelligence-and-briefing:
-    if: github.event.schedule == '0 3 * * 1' || github.event_name == 'workflow_dispatch'
+    if: github.event.schedule == '0 3 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.crawl_job == 'none')
     runs-on: ubuntu-latest
     steps:
       - name: Warm the (possibly sleeping) free Render service
@@ -122,3 +135,42 @@ jobs:
             -H "Authorization: Bearer ${API_SECRET_KEY}" \
             "${API_BASE_URL}/api/v1/internal/briefing/generate" \
             && echo "" && echo "briefing generation triggered" || echo "briefing generation failed (continuing)"
+
+  # Manual-only: one-shot deep-pull crawl (see POST /internal/ingest/crawl/{job}'s
+  # docstring). Never runs on the regular schedule -- only via workflow_dispatch
+  # with crawl_job set to something other than "none". Deliberately excludes
+  # itself from ingest-and-enrich/weekly-intelligence-and-briefing's own
+  # workflow_dispatch runs (see their `if:` conditions) so a crawl doesn't
+  # collide with those over the single global job_lock.
+  manual-crawl:
+    if: github.event_name == 'workflow_dispatch' && inputs.crawl_job != 'none'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm the (possibly sleeping) free Render service
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 15 \
+            "${API_BASE_URL}/health" || echo "health warmup failed (continuing)"
+
+      - name: Crawl
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+          CRAWL_JOB: ${{ inputs.crawl_job }}
+          CRAWL_TARGET: ${{ inputs.crawl_target }}
+        run: |
+          jobs="${CRAWL_JOB}"
+          [ "${CRAWL_JOB}" = "both" ] && jobs="github huggingface"
+          for job in ${jobs}; do
+            echo "--- crawl: ${job} ---"
+            url="${API_BASE_URL}/api/v1/internal/ingest/crawl/${job}"
+            [ -n "${CRAWL_TARGET}" ] && url="${url}?target=${CRAWL_TARGET}"
+            # Deep crawls paginate a lot (esp. huggingface's default target of
+            # 25000) -- give this the same generous budget as the weekly
+            # Layer-3 jobs rather than the lighter ingest timeouts.
+            curl -fsS --max-time 1800 -X POST \
+              -H "Authorization: Bearer ${API_SECRET_KEY}" \
+              "${url}" \
+              && echo "" && echo "${job} crawl triggered" || echo "${job} crawl failed/timed out (safe to retry)"
+          done
