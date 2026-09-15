@@ -10,6 +10,7 @@ current ~120-repo plateau. GitHub's Search API has its own (stricter) rate
 limit — 30 req/min authenticated, 10 req/min unauthenticated — so pagination
 sleeps between pages accordingly.
 """
+import logging
 import time
 import requests
 from sqlalchemy import select
@@ -18,6 +19,8 @@ from src.database import session_scope
 from src.models import Repository, Paper, KnowledgeGraphEdge
 from src.config import settings
 from src.utils.text import extract_arxiv_ids
+
+logger = logging.getLogger(__name__)
 
 GH_SEARCH = "https://api.github.com/search/repositories"
 
@@ -133,20 +136,40 @@ def crawl(self, target_per_query: int = 500, queries: list[str] | None = None):
     """One-shot deep pull: paginate each query up to GitHub's 1000-result cap
     (or target_per_query, whichever is smaller). Safe to re-run (idempotent
     upserts). This is what actually grows the tracked repo count — the
-    recurring `run()` only refreshes the same top-of-page results."""
+    recurring `run()` only refreshes the same top-of-page results.
+
+    Per-query retry is a plain bounded loop with a real sleep, not
+    self.retry() -- this whole free-tier deployment runs Celery in
+    CELERY_EAGER (in-process, synchronous) mode with no real worker/broker
+    behind it, so self.retry()'s queue-requeue semantics don't apply the way
+    they would against a real Celery worker, and calling it from inside a
+    request handler like this produced an unexplained 502 (likely a raw
+    Retry exception surfacing somewhere it isn't handled) the first time
+    this ran for real. A local retry with an actual time.sleep() gets the
+    same backoff behavior without depending on Celery's retry machinery."""
     qs = queries or CRAWL_QUERIES
     upserted, seen = 0, set()
     db = session_scope()
     try:
-        for query in qs:
+        for qi, query in enumerate(qs):
+            if qi:
+                _rate_limit_sleep()  # space out queries too, not just pages within one
             fetched_for_query = 0
             for page in range(1, CRAWL_MAX_PAGES + 1):
                 if fetched_for_query >= target_per_query:
                     break
-                try:
-                    repos = search_repos(query, per_page=CRAWL_PER_PAGE, page=page)
-                except Exception as exc:
-                    raise self.retry(exc=exc, countdown=min(2 ** self.request.retries * 5, 120))
+                repos = None
+                for attempt in range(3):
+                    try:
+                        repos = search_repos(query, per_page=CRAWL_PER_PAGE, page=page)
+                        break
+                    except Exception as exc:
+                        if attempt == 2:
+                            logger.warning("github.crawl: giving up on %r page %d after 3 attempts: %s",
+                                           query, page, exc)
+                            repos = []
+                            break
+                        time.sleep(min(5 * 2 ** attempt, 60))
                 if not repos:
                     break
                 for rd in repos:
