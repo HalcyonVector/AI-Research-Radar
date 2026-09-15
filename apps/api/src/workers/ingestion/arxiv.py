@@ -75,7 +75,19 @@ def run(self, max_results: int = MAX_RESULTS):
     CELERY_EAGER=true), and raising it from inside a request handler produced
     an unexplained 502 the one time that path actually got exercised. A
     failed category here just gets skipped for this run rather than
-    aborting the other 9 categories behind it."""
+    aborting the other 9 categories behind it.
+
+    Also periodically clears the SQLAlchemy session's identity map (every
+    EXPUNGE_EVERY papers). This one call can process a large real backlog in
+    a single request -- everything since ingestion last actually worked, per
+    the dormancy this whole deployment saga uncovered -- and every Paper,
+    Author, and PaperAuthor object stays resident in that one session for
+    the entire multi-category loop otherwise. On a 512MB free-tier instance
+    that's a plausible, still-unconfirmed OOM driver behind arxiv's
+    unexplained 502 (embeddings were ruled out: this project already uses
+    the Gemini provider, not local sentence-transformers). Cheap to guard
+    against regardless of whether it's the actual cause."""
+    EXPUNGE_EVERY = 20
     ingested = 0
     db = session_scope()
     try:
@@ -124,6 +136,8 @@ def run(self, max_results: int = MAX_RESULTS):
                 from src.workers.ai.summary import generate as gen_sum
                 gen_emb.delay(str(paper.id))
                 gen_sum.delay(str(paper.id))
+                if ingested % EXPUNGE_EVERY == 0:
+                    db.expunge_all()
         return {"ingested": ingested}
     finally:
         db.close()
