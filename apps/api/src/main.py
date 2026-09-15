@@ -1,4 +1,5 @@
 """FastAPI application factory (spec 2.1)."""
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -32,11 +33,20 @@ def create_app() -> FastAPI:
         # command quota, and the DB (Supabase) has its own 7-day inactivity
         # auto-pause -- neither keeps the other awake, so both need a real touch
         # on every ping, not just Render's dyno staying warm.
+        # RENDER_GIT_COMMIT is set automatically by Render on every deploy --
+        # exposing it here so a caller can confirm which commit is actually
+        # live before drawing conclusions from a test, instead of assuming a
+        # 200 here means the code just pushed is the code running. A redeploy
+        # in flight can tear down and restart the container mid-request,
+        # producing a clean 502 that has nothing to do with application
+        # logic -- confirmed happening at least once during this project's
+        # own debugging (see git history around the arxiv ingestion fixes).
         return {
             "status": "ok",
             "environment": settings.environment,
             "redis": redis_up(),
             "database": db_up(),
+            "git_commit": os.environ.get("RENDER_GIT_COMMIT", "unknown"),
         }
 
     api = "/api/v1"
