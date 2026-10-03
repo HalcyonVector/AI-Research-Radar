@@ -7,6 +7,7 @@ from src.middleware.auth import require_admin
 from src.services import apikey_service
 from src.utils.joblock import job_lock, JobLockedError
 from src.utils.memcleanup import release_job_memory
+from src.utils.subjob import run_isolated
 
 router = APIRouter(prefix="/internal", tags=["internal"], dependencies=[Depends(require_admin)])
 
@@ -28,9 +29,9 @@ def ingest_trigger():
     from src.workers.ingestion import arxiv, huggingface, github
     try:
         with job_lock("ingest_trigger"):
-            arxiv.run.delay()
-            huggingface.run.delay()
-            github.run.delay()
+            run_isolated(arxiv.run)
+            run_isolated(huggingface.run)
+            run_isolated(github.run)
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -50,7 +51,7 @@ def ingest_trigger_job(job: str):
         raise HTTPException(404, f"unknown ingest job '{job}', expected one of {INGEST_TRIGGER_JOBS}")
     try:
         with job_lock(f"ingest_trigger_{job}"):
-            jobs[job].delay()
+            run_isolated(jobs[job])
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -74,14 +75,14 @@ def ingest_enrich():
     from src.workers.graph import edge_builder
     try:
         with job_lock("ingest_enrich"):
-            semantic_scholar.run.delay()
-            openalex.run.delay()
-            social.run.delay()
-            paper_scores.run_all.delay()
-            trend_scores.run.delay()
-            model_scores.run.delay()
-            edge_builder.rebuild.delay()
-            orchestrate.run_daily.delay()
+            run_isolated(semantic_scholar.run)
+            run_isolated(openalex.run)
+            run_isolated(social.run)
+            run_isolated(paper_scores.run_all)
+            run_isolated(trend_scores.run)
+            run_isolated(model_scores.run)
+            run_isolated(edge_builder.rebuild)
+            run_isolated(orchestrate.run_daily)
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -124,7 +125,7 @@ def ingest_enrich_job(job: str):
         raise HTTPException(404, f"unknown enrich job '{job}', expected one of {INGEST_ENRICH_JOBS}")
     try:
         with job_lock(f"ingest_enrich_{job}"):
-            jobs[job].delay()
+            run_isolated(jobs[job])
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -163,7 +164,7 @@ def ingest_crawl_job(job: str, target: int | None = None):
         kwargs = {"target": target} if job == "huggingface" else {"target_per_query": target}
     try:
         with job_lock(f"ingest_crawl_{job}"):
-            jobs[job].delay(**kwargs)
+            run_isolated(jobs[job], **kwargs)
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -181,7 +182,8 @@ def categories_backfill():
     from src.workers.maintenance import backfill_categories
     try:
         with job_lock("categories_backfill"):
-            return backfill_categories.run()
+            run_isolated(backfill_categories.run)
+            return {"status": "done", "job": "categories_backfill"}
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -193,8 +195,8 @@ def scores_recompute():
     from src.workers.scoring import paper_scores, trend_scores
     try:
         with job_lock("scores_recompute"):
-            paper_scores.run_all.delay()
-            trend_scores.run.delay()
+            run_isolated(paper_scores.run_all)
+            run_isolated(trend_scores.run)
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -207,7 +209,7 @@ def briefing_generate():
     from src.workers.ai import briefing
     try:
         with job_lock("briefing_generate"):
-            briefing.generate.delay()
+            run_isolated(briefing.generate)
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -225,7 +227,7 @@ def intelligence_recompute():
     from src.workers.intelligence import orchestrate
     try:
         with job_lock("intelligence_recompute"):
-            orchestrate.run_daily.delay()
+            run_isolated(orchestrate.run_daily)
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:
@@ -265,7 +267,7 @@ def intelligence_weekly_job(job: str):
         raise HTTPException(404, f"unknown weekly job '{job}', expected one of {WEEKLY_INTELLIGENCE_JOBS}")
     try:
         with job_lock(f"intelligence_weekly_{job}"):
-            jobs[job].delay()
+            run_isolated(jobs[job])
     except JobLockedError as e:
         raise _locked_conflict(e)
     finally:

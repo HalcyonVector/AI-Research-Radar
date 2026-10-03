@@ -8,8 +8,9 @@ from src.config import settings
 engine = create_engine(
     settings.sqlalchemy_url,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=3,
+    max_overflow=5,
+    pool_recycle=1800,
     future=True,
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
