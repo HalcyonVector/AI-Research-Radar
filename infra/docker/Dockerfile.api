@@ -37,7 +37,9 @@ ENV PYTHONUNBUFFERED=1 \
     # glibc creates up to 8x-cores malloc arenas for a threaded server and rarely
     # returns them to the OS -- the classic cause of slowly-climbing RSS in a
     # FastAPI app whose sync routes run in a threadpool. 2 arenas is plenty here.
-    MALLOC_ARENA_MAX=2 \n    MALLOC_TRIM_THRESHOLD_=65536 \n    OMP_NUM_THREADS=1 \
+    MALLOC_ARENA_MAX=2 \
+    MALLOC_TRIM_THRESHOLD_=65536 \
+    OMP_NUM_THREADS=1 \
     MKL_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1 \
