@@ -179,10 +179,10 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
         run: |
-          curl -fsS --max-time 300 -X POST \
+          # no -f: print the response body on 4xx/5xx too, so the real error is visible
+          curl -sS --max-time 300 -X POST -w "\nHTTP %{http_code}\n" \
             -H "Authorization: Bearer ${API_SECRET_KEY}" \
-            "${API_BASE_URL}/api/v1/internal/ingest/trigger/arxiv" \
-            && echo "" && echo "arxiv triggered" || echo "arxiv failed/timed out"
+            "${API_BASE_URL}/api/v1/internal/ingest/trigger/arxiv" || echo "arxiv failed/timed out"
 
       - name: Crawl
         if: inputs.crawl_job != 'unlock' && inputs.crawl_job != 'arxiv'
