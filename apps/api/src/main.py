@@ -1,6 +1,7 @@
 """FastAPI application factory (spec 2.1)."""
 import logging
 import os
+import time
 from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -47,6 +48,25 @@ def _warm_dashboard_cache_if_stale() -> None:
         db.close()
 
 
+# /health is hit constantly (Render's own health check every few seconds, plus the
+# keep-warm crons), and every call used to run a Redis PING + a Redis cache read +
+# the middleware's rate-limit INCR/EXPIRE -- ~25k Upstash commands a day from health
+# probes alone, i.e. the whole 500k/month free quota by the ~20th. Real Redis/DB
+# round-trips (which still keep Upstash and Supabase from pausing) now happen at most
+# once per HEALTH_CHECK_TTL; calls in between answer from this in-process snapshot.
+HEALTH_CHECK_TTL = 300
+_health_state: dict = {"ts": 0.0, "redis": False, "database": False}
+
+
+def _health_status() -> tuple[bool, bool, bool]:
+    """Return (redis_ok, db_ok, refreshed_now)."""
+    now = time.monotonic()
+    if now - _health_state["ts"] < HEALTH_CHECK_TTL:
+        return _health_state["redis"], _health_state["database"], False
+    _health_state.update(ts=now, redis=redis_up(), database=db_up())
+    return _health_state["redis"], _health_state["database"], True
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="AI Research Radar API", version="1.1.0", docs_url="/docs")
 
@@ -78,12 +98,14 @@ def create_app() -> FastAPI:
         # so pinging /health stays fast regardless of whether the dashboard
         # cache needed a real recompute -- see _warm_dashboard_cache_if_stale's
         # own docstring for why this exists at all.
-        background_tasks.add_task(_warm_dashboard_cache_if_stale)
+        redis_ok, db_ok, refreshed = _health_status()
+        if refreshed:
+            background_tasks.add_task(_warm_dashboard_cache_if_stale)
         return {
             "status": "ok",
             "environment": settings.environment,
-            "redis": redis_up(),
-            "database": db_up(),
+            "redis": redis_ok,
+            "database": db_ok,
             "git_commit": os.environ.get("RENDER_GIT_COMMIT", "unknown"),
         }
 

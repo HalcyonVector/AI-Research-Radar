@@ -36,6 +36,11 @@ async def rate_limit_middleware(request: Request, call_next):
     if not settings.cache_enabled:
         return await call_next(request)
     path = request.url.path
+    # Never rate-limit (or spend Redis commands on) the health probe: Render's own
+    # health check plus the keep-warm crons hit it every few seconds, and the
+    # INCR/EXPIRE pair per call was burning Upstash's 500k/month command quota.
+    if path == "/health":
+        return await call_next(request)
     limit = 20 if "/intelligence/" in path or "/internal/" in path else 100
     ident = request.client.host if request.client else "anon"
 
