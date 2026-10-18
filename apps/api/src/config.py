@@ -51,7 +51,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
 
     # Embeddings: "local" (sentence-transformers, 384d) or "gemini" (768d) or "openai" (1536d)
-    embedding_provider: str = "local"
+    # Default gemini: "local" loads PyTorch + sentence-transformers (300MB+), which
+    # cannot fit the 512MB free-tier instance. Opt in to local explicitly via env.
+    embedding_provider: str = "gemini"
     embedding_model_local: str = "all-MiniLM-L6-v2"
     embedding_dim: int = 384  # keep in sync with migration + provider
 
