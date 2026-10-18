@@ -23,7 +23,7 @@ import threading
 import time
 
 # Leave headroom for the web process (~150-200MB) inside Render's 512MB.
-RSS_LIMIT_MB = int(os.environ.get("JOB_RSS_LIMIT_MB", "260"))
+RSS_LIMIT_MB = int(os.environ.get("JOB_RSS_LIMIT_MB", "290"))
 
 
 def _rss_mb() -> float:
@@ -49,10 +49,12 @@ def main() -> int:
     kwargs = json.loads(sys.argv[2]) if len(sys.argv) > 2 else {}
     threading.Thread(target=_watchdog, daemon=True).start()
 
-    from src.celery_app import celery_app, TASK_MODULES
-    for m in TASK_MODULES:
-        importlib.import_module(m)
-    task = celery_app.tasks[name]
+    # Import ONLY this task's own module (celery task names mirror the module path:
+    # "workers.ingestion.arxiv.run" -> src.workers.ingestion.arxiv). Importing every
+    # task module up front pulled in networkx/numpy/etc. (~60-80MB) even for a plain
+    # arXiv fetch, which alone was enough to trip the RSS ceiling.
+    module_path, func_name = name.rsplit(".", 1)
+    task = getattr(importlib.import_module(f"src.{module_path}"), func_name)
     print(f"[run_job] start {name} {kwargs} rss={_rss_mb():.0f}MB", flush=True)
     result = task.run(**kwargs)  # call the function directly so errors propagate
     gc.collect()
