@@ -99,9 +99,7 @@ def upsert_model(db, md: dict, seen: set) -> bool:
         db.add(ModelDownloadHistory(model_id=m.id, recorded_at=today,
                downloads_total=downloads, downloads_30d=downloads, likes=likes))
     db.commit()
-    if not m.ai_summary and _worth_summarizing(downloads, likes):
-        from src.workers.ai.model_summary import generate as gen_model_sum
-        gen_model_sum.delay(str(m.id))
+    # Summaries are filled later by workers.ai.backfill, under a per-run cap.
     return True
 
 

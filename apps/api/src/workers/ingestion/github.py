@@ -106,9 +106,7 @@ def upsert_repo(db, rd: dict) -> bool:
                        target_type="paper", target_id=p.id, relation="implements", source="github"))
                 p.github_impl_count = (p.github_impl_count or 0) + 1
     db.commit()
-    if not repo.ai_summary:
-        from src.workers.ai.repo_summary import generate as gen_repo_sum
-        gen_repo_sum.delay(str(repo.id))
+    # Summaries are filled later by workers.ai.backfill, under a per-run cap.
     return True
 
 

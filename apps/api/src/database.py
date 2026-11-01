@@ -12,6 +12,10 @@ engine = create_engine(
     max_overflow=5,
     pool_recycle=1800,
     future=True,
+    # Supabase's transaction pooler (port 6543) hands each transaction to any
+    # backend, so psycopg's automatic server-side prepared statements collide
+    # ("prepared statement _pg3_0 already exists"). Never prepare.
+    connect_args={"prepare_threshold": None} if "+psycopg" in settings.sqlalchemy_url else {},
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 

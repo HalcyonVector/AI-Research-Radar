@@ -36,8 +36,10 @@ moving dashboard), and they're generous for this app's actual usage pattern:
 
 | Model | Requests/min | Requests/day | Tokens/min |
 |-------|--------------|---------------|------------|
-| `llama-3.3-70b-versatile` (heavy lane — papers + Layer-3 reasoning) | 30 | 1,000 | 12,000 |
-| `llama-3.1-8b-instant` (light lane — model/repo cards, high volume) | 30 | 14,400 | 6,000 |
+| `openai/gpt-oss-120b` (heavy lane — papers + Layer-3 reasoning) | 30 | 1,000 | 8,000 |
+| `openai/gpt-oss-20b` (light lane — model/repo cards, high volume) | 30 | 1,000 | 8,000 |
+
+(The Llama 3.x models were shut down on Groq's free tier on 2026-08-16.)
 
 This maps almost exactly onto the app's existing lane design (`src/ai/llm.py`):
 a "heavy" lane for quality-sensitive, low-volume work (paper summaries, weekly
@@ -54,8 +56,8 @@ Set these in your backend's environment (Render dashboard, see step 5):
 AI_MODE=openai
 OPENAI_BASE_URL=https://api.groq.com/openai/v1
 OPENAI_API_KEY=<your free key from console.groq.com>
-OPENAI_MODEL_HEAVY=llama-3.3-70b-versatile
-OPENAI_MODEL_LIGHT=llama-3.1-8b-instant
+OPENAI_MODEL_HEAVY=openai/gpt-oss-120b
+OPENAI_MODEL_LIGHT=openai/gpt-oss-20b
 ```
 
 **Optional failover for when Groq's cap is hit:** the app supports a second
@@ -202,8 +204,8 @@ automatically instead of you configuring it by hand.
    ```
    AI_MODE=openai
    OPENAI_BASE_URL=https://api.groq.com/openai/v1
-   OPENAI_MODEL_HEAVY=llama-3.3-70b-versatile
-   OPENAI_MODEL_LIGHT=llama-3.1-8b-instant
+   OPENAI_MODEL_HEAVY=openai/gpt-oss-120b
+   OPENAI_MODEL_LIGHT=openai/gpt-oss-20b
    ```
 
    The blueprint already sets `ENVIRONMENT=production`, `CELERY_EAGER=true`
@@ -331,8 +333,8 @@ Why: Vercel hosts the Next.js frontend, auto-deploying on every push to `main`.
 | `AI_MODE` | Render | `openai` |
 | `OPENAI_BASE_URL` | Render | `https://api.groq.com/openai/v1` |
 | `OPENAI_API_KEY` | Render | Groq (step 4) |
-| `OPENAI_MODEL_HEAVY` | Render | `llama-3.3-70b-versatile` |
-| `OPENAI_MODEL_LIGHT` | Render | `llama-3.1-8b-instant` |
+| `OPENAI_MODEL_HEAVY` | Render | `openai/gpt-oss-120b` |
+| `OPENAI_MODEL_LIGHT` | Render | `openai/gpt-oss-20b` |
 | `HF_API_TOKEN` | Render | optional, huggingface.co settings |
 | `GITHUB_TOKEN` | Render | optional, github.com settings → Developer settings |
 | `OPENALEX_MAILTO` | Render | optional, your email |
