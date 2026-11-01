@@ -1,20 +1,21 @@
 """Knowledge-graph edge builder (spec 2.2 Graph Service)."""
 from sqlalchemy import select, or_
+from sqlalchemy.orm import selectinload
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper, Model, Repository, Author, KnowledgeGraphEdge
 
 
-def _ensure_edge(db, st, sid, tt, tid, rel, source="derived", props=None, weight=1.0) -> int:
-    e = db.execute(select(KnowledgeGraphEdge).where(
-        KnowledgeGraphEdge.source_type == st, KnowledgeGraphEdge.source_id == sid,
-        KnowledgeGraphEdge.target_type == tt, KnowledgeGraphEdge.target_id == tid,
-        KnowledgeGraphEdge.relation == rel)).scalar_one_or_none()
-    if not e:
-        db.add(KnowledgeGraphEdge(source_type=st, source_id=sid, target_type=tt, target_id=tid,
-               relation=rel, source=source, properties=props, weight=weight))
-        return 1
-    return 0
+def _ensure_edge(db, existing: set, st, sid, tt, tid, rel, source="derived", props=None, weight=1.0) -> int:
+    """`existing` holds every edge key already in the table (loaded once per
+    rebuild), so this costs no query per edge."""
+    key = (st, sid, tt, tid, rel)
+    if key in existing:
+        return 0
+    existing.add(key)
+    db.add(KnowledgeGraphEdge(source_type=st, source_id=sid, target_type=tt, target_id=tid,
+           relation=rel, source=source, properties=props, weight=weight))
+    return 1
 
 
 @celery_app.task(name="workers.graph.edge_builder.rebuild")
@@ -31,21 +32,25 @@ def rebuild(limit: int = 2000):
     db = session_scope()
     try:
         n = 0
+        existing = set(db.execute(select(
+            KnowledgeGraphEdge.source_type, KnowledgeGraphEdge.source_id, KnowledgeGraphEdge.target_type,
+            KnowledgeGraphEdge.target_id, KnowledgeGraphEdge.relation)).tuples().all())
 
         # paper <-> author (existing), paper -> category (new)
-        papers = db.execute(select(Paper).order_by(Paper.published_at.desc()).limit(limit)).scalars().all()
+        papers = db.execute(select(Paper).options(selectinload(Paper.authors))
+                            .order_by(Paper.published_at.desc()).limit(limit)).scalars().all()
         for p in papers:
             for pa in p.authors:
-                n += _ensure_edge(db, "paper", p.id, "author", pa.author_id, "authored_by", "ingest")
+                n += _ensure_edge(db, existing, "paper", p.id, "author", pa.author_id, "authored_by", "ingest")
             if p.primary_category_id:
-                n += _ensure_edge(db, "paper", p.id, "category", p.primary_category_id, "belongs_to", "ingest")
+                n += _ensure_edge(db, existing, "paper", p.id, "category", p.primary_category_id, "belongs_to", "ingest")
 
         # author -> org, from OpenAlex-enriched affiliations
         authors = db.execute(
             select(Author).where(Author.primary_org_id.isnot(None))
         ).scalars().all()
         for a in authors:
-            n += _ensure_edge(db, "author", a.id, "org", a.primary_org_id, "affiliated_with", "enrichment")
+            n += _ensure_edge(db, existing, "author", a.id, "org", a.primary_org_id, "affiliated_with", "enrichment")
 
         # model -> paper it implements, model -> publishing org. Filtered to
         # rows that actually have one of these set — the models table is huge
@@ -57,9 +62,9 @@ def rebuild(limit: int = 2000):
         ).scalars().all()
         for m in models:
             if m.linked_paper_id:
-                n += _ensure_edge(db, "paper", m.linked_paper_id, "model", m.id, "implemented_by", "ingest")
+                n += _ensure_edge(db, existing, "paper", m.linked_paper_id, "model", m.id, "implemented_by", "ingest")
             if m.org_id:
-                n += _ensure_edge(db, "model", m.id, "org", m.org_id, "published_by", "ingest")
+                n += _ensure_edge(db, existing, "model", m.id, "org", m.org_id, "published_by", "ingest")
 
         # repo -> paper it implements, repo -> packaged model
         repos = db.execute(
@@ -67,9 +72,9 @@ def rebuild(limit: int = 2000):
         ).scalars().all()
         for r in repos:
             if r.linked_paper_id:
-                n += _ensure_edge(db, "paper", r.linked_paper_id, "repo", r.id, "has_implementation", "ingest")
+                n += _ensure_edge(db, existing, "paper", r.linked_paper_id, "repo", r.id, "has_implementation", "ingest")
             if r.linked_model_id:
-                n += _ensure_edge(db, "repo", r.id, "model", r.linked_model_id, "packaged_as", "ingest")
+                n += _ensure_edge(db, existing, "repo", r.id, "model", r.linked_model_id, "packaged_as", "ingest")
 
         db.commit()
         return {"edges_touched": n}

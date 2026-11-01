@@ -1,6 +1,13 @@
-"""Research DNA decomposition (spec 1.4.8.5)."""
-from datetime import datetime, timezone, timedelta
-from sqlalchemy import select
+"""Research DNA decomposition (spec 1.4.8.5).
+
+One heavy-lane LLM call per paper. Capped per run because Groq's free tier
+allows ~1K heavy requests/day, shared with paper summaries (60/day) and
+visitor-triggered summaries (<=150/day): 4 runs/day * PER_RUN = 80/day.
+Papers without a decomposition are picked highest-scoring first, so the
+backlog drains in order of importance.
+"""
+import time
+from sqlalchemy import desc, select
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper
@@ -10,17 +17,21 @@ from src.ai.prompts import DNA_PROMPT, vocabulary_block
 from src.config import settings
 from src.ai.vocabulary import VOCAB_SET
 
+SPACING_S = 15  # stays under the free ~8K tokens/minute cap
+
 
 @celery_app.task(name="workers.intelligence.dna.compute_research_dna", bind=True, max_retries=2)
-def compute_research_dna(self, since_hours: int = 24, limit: int = 500):
+def compute_research_dna(self, limit: int = 20):
     db = session_scope()
     try:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=since_hours)
         existing = select(PaperConceptComposition.paper_id).distinct()
-        papers = db.execute(select(Paper).where(Paper.ingested_at >= cutoff, Paper.id.notin_(existing))
+        papers = db.execute(select(Paper).where(Paper.id.notin_(existing))
+                            .order_by(desc(Paper.composite_score), desc(Paper.published_at))
                             .limit(limit)).scalars().all()
         done = 0
-        for p in papers:
+        for i, p in enumerate(papers):
+            if i:
+                time.sleep(SPACING_S)
             try:
                 res = complete_json(DNA_PROMPT.format(title=p.title, abstract=(p.abstract or "")[:2500],
                                                       vocabulary=vocabulary_block()),

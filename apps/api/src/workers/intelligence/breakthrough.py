@@ -1,6 +1,6 @@
 """Emerging Breakthrough + Influence scores (spec 1.4.8.3, 1.4.8.8)."""
 from datetime import datetime, timezone
-from sqlalchemy import select
+from sqlalchemy import func, select
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper, PaperMetricsHistory, KnowledgeGraphEdge
@@ -24,10 +24,21 @@ def compute_breakthrough_scores(limit: int = 2000):
     db = session_scope()
     try:
         papers = db.execute(select(Paper).order_by(Paper.published_at.desc()).limit(limit)).scalars().all()
+        ids = [p.id for p in papers]
+        # Everything the loop needs, in 3 queries instead of 3 per paper.
+        hist_by_paper: dict = {}
+        for h in db.execute(select(PaperMetricsHistory).where(PaperMetricsHistory.paper_id.in_(ids))
+                            .order_by(PaperMetricsHistory.paper_id, PaperMetricsHistory.recorded_at)).scalars():
+            hist_by_paper.setdefault(h.paper_id, []).append(h)
+        derived_counts = dict(db.execute(
+            select(KnowledgeGraphEdge.target_id, func.count())
+            .where(KnowledgeGraphEdge.relation == "derived_from", KnowledgeGraphEdge.target_id.in_(ids))
+            .group_by(KnowledgeGraphEdge.target_id)).all())
+        recs = {r.paper_id: r for r in db.execute(
+            select(PaperIntelligenceScores).where(PaperIntelligenceScores.paper_id.in_(ids))).scalars()}
         n = 0
         for p in papers:
-            hist = db.execute(select(PaperMetricsHistory).where(PaperMetricsHistory.paper_id == p.id)
-                              .order_by(PaperMetricsHistory.recorded_at)).scalars().all()
+            hist = hist_by_paper.get(p.id, [])
             impl_g = _growth(hist, "github_impl_count")
             hf_g = _growth(hist, "hf_model_count")
             cit_g = _growth(hist, "citation_count")
@@ -36,9 +47,7 @@ def compute_breakthrough_scores(limit: int = 2000):
             drivers = {"implementations": impl_g, "discussion": disc_g, "citations": cit_g, "hf_models": hf_g}
             driver = max(drivers, key=drivers.get) if eb > 0 else None
             # influence
-            deriv = db.scalar(select(__import__("sqlalchemy").func.count()).select_from(KnowledgeGraphEdge)
-                              .where(KnowledgeGraphEdge.relation == "derived_from",
-                                     KnowledgeGraphEdge.target_id == p.id)) or 0
+            deriv = derived_counts.get(p.id, 0)
             impl_norm = min((p.github_impl_count or 0) / 50, 1.0)
             hf_norm = min((p.hf_model_count or 0) / 20, 1.0)
             deriv_norm = min(deriv / 10, 1.0)
@@ -46,7 +55,7 @@ def compute_breakthrough_scores(limit: int = 2000):
             # real cross-domain citation/field-diversity analysis exists yet
             cross_domain = 0.2
             infl = influence_score(cit_g, impl_norm, hf_norm, disc_g, deriv_norm, cross_domain)
-            rec = db.get(PaperIntelligenceScores, p.id)
+            rec = recs.get(p.id)
             if not rec:
                 rec = PaperIntelligenceScores(paper_id=p.id)
                 db.add(rec)
