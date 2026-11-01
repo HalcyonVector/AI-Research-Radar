@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { TopNav } from "./TopNav";
 import { CommandPalette } from "@/components/search/CommandPalette";
 import { CompareBar } from "@/components/papers/CompareBar";
+import { ServerWakeNotice } from "./ServerWakeNotice";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -14,6 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
       <CommandPalette />
       <CompareBar />
+      <ServerWakeNotice />
     </div>
   );
 }

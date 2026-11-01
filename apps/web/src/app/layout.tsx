@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/providers/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { CommandPaletteProvider } from "@/components/providers/CommandPaletteProvider";
@@ -24,11 +24,22 @@ export const metadata: Metadata = {
   title: "AI Research Radar",
   description:
     "A continuously updated, AI-assisted intelligence layer over the global AI research ecosystem.",
+  alternates: {
+    types: { "application/rss+xml": [{ url: "/rss.xml", title: "AI Research Radar: Weekly Briefings" }] },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${grotesk.variable} ${jetbrains.variable}`}>
+    <html
+      lang="en"
+      data-theme="dark"
+      className={`dark ${grotesk.variable} ${jetbrains.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="font-sans antialiased">
         <ThemeProvider>
           <QueryProvider>

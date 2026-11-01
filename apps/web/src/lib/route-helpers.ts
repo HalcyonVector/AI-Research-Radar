@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { safeApiFetch } from "./api";
 
+/** Data only changes when the 6-hourly ingest runs, so successful public GETs
+ * are cached on Vercel's CDN. stale-while-revalidate means a visitor gets the
+ * cached copy instantly while the CDN refreshes it in the background, so most
+ * visits never wait on a sleeping Render instance. */
+const CDN_S_MAXAGE = 600;
+const CDN_STALE_WHILE_REVALIDATE = 86400;
+
 /**
  * Forward selected query params from an incoming request to the upstream API,
  * and return the JSON as a NextResponse. On upstream failure, the real error
  * (status + body) is passed through as-is — no mock/demo fallback data.
+ * Per-client requests (those sending X-Client-Id) are never CDN-cached.
  */
 export async function proxyGet(
   req: NextRequest,
   upstreamPath: string,
   allowedParams: string[] = [],
-  opts: { timeoutMs?: number; headers?: Record<string, string> } = {}
+  opts: { timeoutMs?: number; headers?: Record<string, string>; cdnCache?: boolean } = {}
 ): Promise<NextResponse> {
   const searchParams: Record<string, string> = {};
   const incoming = req.nextUrl.searchParams;
@@ -33,7 +41,12 @@ export async function proxyGet(
   if ("error" in result) {
     return NextResponse.json(result.error, { status: result.status });
   }
-  return NextResponse.json(result.data);
+  const cacheable = (opts.cdnCache ?? true) && !opts.headers?.["X-Client-Id"];
+  return NextResponse.json(result.data, {
+    headers: cacheable
+      ? { "Cache-Control": `public, max-age=0, s-maxage=${CDN_S_MAXAGE}, stale-while-revalidate=${CDN_STALE_WHILE_REVALIDATE}` }
+      : { "Cache-Control": "private, no-store" },
+  });
 }
 
 /**

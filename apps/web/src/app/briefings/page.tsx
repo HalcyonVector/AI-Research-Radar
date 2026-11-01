@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Newspaper, FileText, Box, Package, ArrowRight } from "lucide-react";
+import { Newspaper, FileText, Box, Package, ArrowRight, Rss } from "lucide-react";
 import { useBriefings, useLatestBriefing } from "@/hooks/useBriefings";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -73,6 +73,15 @@ export default function BriefingsPage() {
         eyebrow="Weekly Digest"
         title="Research Briefings"
         description="AI-generated weekly syntheses of the most important developments across the ecosystem."
+        actions={
+          <a
+            href="/rss.xml"
+            className="inline-flex items-center gap-2 border border-[var(--rule-strong)] px-3 py-1.5 text-[11px] uppercase tracking-widest text-[var(--text-secondary)] transition-colors hover:border-[var(--text-primary)] hover:text-[var(--text-primary)]"
+          >
+            <Rss size={12} />
+            RSS
+          </a>
+        }
       />
 
       {latestLoading ? (

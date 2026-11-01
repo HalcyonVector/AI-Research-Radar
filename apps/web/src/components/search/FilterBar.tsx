@@ -73,7 +73,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
           <SlidersHorizontal size={14} />
           Categories
           {categories.length > 0 && (
-            <span className="ml-1 rounded-full bg-[var(--accent-primary)] px-1.5 text-[10px] font-semibold text-white">
+            <span className="ml-1 rounded-full bg-[var(--accent-primary)] px-1.5 text-[10px] font-semibold text-[var(--bg-base)]">
               {categories.length}
             </span>
           )}

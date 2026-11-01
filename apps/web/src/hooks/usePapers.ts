@@ -1,11 +1,12 @@
 "use client";
 
-import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { fetchJson } from "@/lib/client";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ClientFetchError, fetchJson } from "@/lib/client";
 import type {
   PaginatedResponse,
   Paper,
   PaperDetail,
+  AISummary,
   MetricsHistoryPoint,
 } from "@/types/paper";
 
@@ -70,5 +71,22 @@ export function usePaperMetricsHistory(id: string) {
       return res?.data ?? [];
     },
     enabled: !!id,
+  });
+}
+
+/** Generate a missing AI summary on demand. The result is written straight into
+ * the cached paper, since a refetch could return the CDN's pre-summary copy. */
+export function useSummarizePaper(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/papers/${id}/summarize`, { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new ClientFetchError(body.message || body.detail || `Request failed (${res.status})`, res.status);
+      return body as AISummary;
+    },
+    onSuccess: (summary) => {
+      queryClient.setQueryData<PaperDetail>(["paper", id], (old) => (old ? { ...old, ai_summary: summary } : old));
+    },
   });
 }

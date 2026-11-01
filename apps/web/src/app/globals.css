@@ -38,12 +38,48 @@
   --rule-strong: #3a3a3a;
 }
 
+/* Light theme: the same mono system, inverted. Set by ThemeProvider. */
+:root[data-theme="light"] {
+  --bg-base: #ffffff;
+  --bg-surface: #f6f6f6;
+  --bg-elevated: #eeeeee;
+  --bg-subtle: #e8e8e8;
+
+  --glass-surface: #f6f6f6;
+  --glass-border: #d6d6d6;
+
+  --border-base: #d6d6d6;
+  --border-strong: #b5b5b5;
+
+  --text-primary: #000000;
+  --text-secondary: #5c5c5c;
+  --text-tertiary: #8f8f8f;
+
+  --accent-primary: #000000;
+  --accent-hover: #000000;
+  --accent-subtle: #e8e8e8;
+  --accent-2: #000000;
+  --accent-3: #000000;
+  --accent-4: #000000;
+
+  --rule: #d6d6d6;
+  --rule-strong: #b5b5b5;
+}
+
 * {
   border-color: var(--border-base);
 }
 
 html {
   color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="light"] .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
 }
 
 body {

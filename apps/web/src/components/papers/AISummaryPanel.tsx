@@ -7,10 +7,38 @@ import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
+import { Button } from "@/components/ui/Button";
+import { useSummarizePaper } from "@/hooks/usePapers";
 
 interface AISummaryPanelProps {
   summary: AISummary | null | undefined;
   loading?: boolean;
+  /** When set, a missing summary can be generated on demand. */
+  paperId?: string;
+}
+
+function GenerateSummary({ paperId }: { paperId: string }) {
+  const { mutate, isPending, isError, error } = useSummarizePaper(paperId);
+  return (
+    <EmptyState
+      icon={Sparkles}
+      compact
+      title={isPending ? "Summarizing this paper…" : "No AI summary yet"}
+      description={
+        isError
+          ? error.message
+          : isPending
+            ? "This usually takes 10-20 seconds."
+            : "Papers are summarized automatically over time, highest-impact first. You can generate this one now."
+      }
+      action={
+        <Button size="sm" onClick={() => mutate()} disabled={isPending}>
+          <Sparkles size={13} />
+          {isPending ? "Generating…" : isError ? "Try again" : "Generate summary"}
+        </Button>
+      }
+    />
+  );
 }
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -30,7 +58,7 @@ function Section({ label, text }: { label: string; text: string }) {
   );
 }
 
-export function AISummaryPanel({ summary, loading }: AISummaryPanelProps) {
+export function AISummaryPanel({ summary, loading, paperId }: AISummaryPanelProps) {
   return (
     <Card>
       <CardHeader>
@@ -48,6 +76,8 @@ export function AISummaryPanel({ summary, loading }: AISummaryPanelProps) {
           <Skeleton className="h-4 w-5/6" />
           <Skeleton className="h-4 w-2/3" />
         </div>
+      ) : !summary && paperId ? (
+        <GenerateSummary paperId={paperId} />
       ) : !summary ? (
         <EmptyState
           icon={Sparkles}

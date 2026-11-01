@@ -13,6 +13,7 @@ import { RecentlyAddedPanel } from "@/components/dashboard/RecentlyAddedPanel";
 import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
 import { SleepingGiantsPanel } from "@/components/dashboard/SleepingGiantsPanel";
 import { RecentReposPanel } from "@/components/dashboard/RecentReposPanel";
+import { SinceLastVisit } from "@/components/dashboard/SinceLastVisit";
 
 export default function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboard();
@@ -34,6 +35,8 @@ export default function DashboardPage() {
         title="Research Radar"
         description="A continuously updated intelligence layer over the global AI research ecosystem."
       />
+
+      <SinceLastVisit />
 
       {isError ? (
         <ErrorState

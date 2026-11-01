@@ -39,7 +39,7 @@ export default function PaperDetailPage() {
               // so they fetch and show their own skeletons immediately instead
               // of waiting on the paper fetch to finish first.
               <>
-                <AISummaryPanel summary={paper?.ai_summary} loading={isLoading} />
+                <AISummaryPanel summary={paper?.ai_summary} loading={isLoading} paperId={id} />
                 <PaperChat paperId={id} />
                 <ResearchDNAChart paperId={id} />
                 <RelatedPapers paperId={id} />

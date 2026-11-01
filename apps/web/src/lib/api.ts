@@ -6,7 +6,10 @@
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:8000";
 const API_SECRET_KEY = process.env.API_SECRET_KEY || "";
 const API_PREFIX = "/api/v1";
-const DEFAULT_TIMEOUT_MS = 8000;
+// A sleeping Render free-tier instance takes 30-60s to wake; anything shorter
+// turns every cold start into an error. Stays under the 60s maxDuration set
+// in each route handler (export const maxDuration).
+const DEFAULT_TIMEOUT_MS = 55000;
 
 export interface UpstreamError {
   error: true;
@@ -28,8 +31,7 @@ interface FetchOptions {
   searchParams?: Record<string, string | number | boolean | undefined | null>;
   body?: unknown;
   revalidate?: number;
-  /** Override the default 8s upstream timeout — some routes (e.g. search, which
-   * may cold-load a local embedding model on first call) legitimately need longer. */
+  /** Override the default upstream timeout. */
   timeoutMs?: number;
   /** Extra headers merged into the upstream request (e.g. X-Client-Id). */
   headers?: Record<string, string>;

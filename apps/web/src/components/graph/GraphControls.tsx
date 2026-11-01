@@ -57,7 +57,7 @@ export function GraphControls({
               className={cn(
                 "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                 depth === d
-                  ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white"
+                  ? "border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--bg-base)]"
                   : "border-[var(--border-base)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               )}
             >
