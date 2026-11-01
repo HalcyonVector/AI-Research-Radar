@@ -53,10 +53,13 @@ jobs:
   #
   # Required repo secrets (Settings -> Secrets and variables -> Actions):
   #   DATABASE_URL    same value as on Render
-  #   GEMINI_API_KEY  same value as on Render (embeddings + summaries)
+  #   OPENAI_API_KEY  the Groq key Render uses (summaries)
+  #   GEMINI_API_KEY  free key from aistudio.google.com (embeddings only;
+  #                   Groq has no embeddings API)
   # Optional: REDIS_URL, HF_API_TOKEN, GH_API_TOKEN (falls back to this
-  # workflow's own token), OPENAI_API_KEY/OPENAI_BASE_URL if AI_MODE=openai.
-  # Optional repo variables: AI_MODE (default cloud), GEMINI_MODEL.
+  # workflow's own token), OPENAI_BASE_URL (defaults to Groq).
+  # Optional repo variables: AI_MODE (default openai), GEMINI_MODEL,
+  # OPENAI_MODEL_HEAVY, OPENAI_MODEL_LIGHT.
   ingest-and-enrich:
     if: github.event.schedule == '0 */6 * * *' || (github.event_name == 'workflow_dispatch' && inputs.crawl_job == 'none')
     runs-on: ubuntu-latest
@@ -76,9 +79,12 @@ jobs:
       REDIS_URL: ${{ secrets.REDIS_URL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
-      AI_MODE: ${{ vars.AI_MODE || 'cloud' }}
+      AI_MODE: ${{ vars.AI_MODE || 'openai' }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      # An unset secret expands to "", which would override the app's Groq default.
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || 'https://api.groq.com/openai/v1' }}
+      OPENAI_MODEL_HEAVY: ${{ vars.OPENAI_MODEL_HEAVY || 'llama-3.3-70b-versatile' }}
+      OPENAI_MODEL_LIGHT: ${{ vars.OPENAI_MODEL_LIGHT || 'llama-3.1-8b-instant' }}
       EMBEDDING_PROVIDER: gemini
       EMBEDDING_DIM: "384"
       HF_API_TOKEN: ${{ secrets.HF_API_TOKEN }}
@@ -89,7 +95,8 @@ jobs:
       - name: Check required secrets
         run: |
           [ -n "${DATABASE_URL}" ] || { echo "::error::DATABASE_URL secret is not set (see the comment above this job)"; exit 1; }
-          [ -n "${GEMINI_API_KEY}" ] || echo "::warning::GEMINI_API_KEY not set - embeddings/summaries will be skipped"
+          [ -n "${OPENAI_API_KEY}" ] || echo "::warning::OPENAI_API_KEY (Groq) not set - summaries will be skipped"
+          [ -n "${GEMINI_API_KEY}" ] || echo "::warning::GEMINI_API_KEY not set - embeddings will be skipped"
 
       - uses: actions/setup-python@v5
         with:
