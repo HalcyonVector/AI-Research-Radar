@@ -93,7 +93,7 @@ def ingest_enrich():
 
 
 INGEST_ENRICH_JOBS = [
-    "semantic-scholar", "openalex", "social", "paper-scores",
+    "ai-backfill", "semantic-scholar", "openalex", "social", "paper-scores",
     "trend-scores", "model-scores", "graph-edges", "intelligence-daily",
 ]
 
@@ -111,7 +111,9 @@ def ingest_enrich_job(job: str):
     from src.workers.scoring import paper_scores, trend_scores, model_scores
     from src.workers.intelligence import orchestrate
     from src.workers.graph import edge_builder
+    from src.workers.ai import backfill
     jobs = {
+        "ai-backfill": backfill.run,
         "semantic-scholar": semantic_scholar.run,
         "openalex": openalex.run,
         "social": social.run,

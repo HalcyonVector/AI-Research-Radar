@@ -27,6 +27,13 @@ def run_isolated(task, **kwargs) -> None:
         raise JobFailedError(f"{task.name} timed out after {JOB_TIMEOUT}s") from e
     if proc.returncode == 137:
         raise JobFailedError(f"{task.name} was killed by its RSS ceiling (see run_job.py)")
+    if proc.returncode < 0:
+        # Killed by a signal from outside, almost always the container's OOM
+        # killer (SIGKILL = -9) firing before the RSS watchdog could. This used
+        # to fall into the warning branch below and the endpoint answered
+        # 200 "queued", hiding a job that had died a few rows in.
+        raise JobFailedError(f"{task.name} was killed by signal {-proc.returncode} "
+                             "(likely the container's memory limit)")
     if proc.returncode != 0:
         # Task-level exceptions were always swallowed under eager .delay(); keep
         # the endpoint non-fatal for them (the child already printed the traceback)

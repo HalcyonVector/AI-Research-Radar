@@ -15,6 +15,28 @@ def get_or_create_author(db: Session, name: str) -> Author:
     return a
 
 
+def get_or_create_authors(db: Session, names: list[str]) -> list[Author]:
+    """Batched get_or_create_author: one SELECT for the whole author list
+    instead of one per author. Ingestion talks to a remote Postgres, so a
+    30-author paper used to cost 30+ sequential round trips. Returns one
+    Author per distinct normalized name, in first-seen order."""
+    wanted: dict[str, str] = {}
+    for n in names:
+        norm = normalize_name(n or "")
+        if norm and norm not in wanted:
+            wanted[norm] = n.strip()
+    if not wanted:
+        return []
+    found = {a.name_normalized: a for a in db.execute(
+        select(Author).where(Author.name_normalized.in_(list(wanted)))).scalars()}
+    for norm, name in wanted.items():
+        if norm not in found:
+            found[norm] = Author(name=name, name_normalized=norm)
+            db.add(found[norm])
+    db.flush()
+    return [found[norm] for norm in wanted]
+
+
 def get_or_create_org(db: Session, name: str) -> Organization:
     norm = normalize_name(name)
     o = db.execute(select(Organization).where(Organization.name_normalized == norm)).scalar_one_or_none()
@@ -96,7 +118,8 @@ KEYWORD_OVERRIDES: list[tuple[str, list[str], list[str]]] = [
 
 
 def category_for_arxiv(
-    db: Session, arxiv_cats: list[str], title: str = "", abstract: str = ""
+    db: Session, arxiv_cats: list[str], title: str = "", abstract: str = "",
+    cats: list[ResearchCategory] | None = None,
 ) -> ResearchCategory | None:
     """Map a paper's arXiv categories to the best-matching research category.
 
@@ -108,8 +131,12 @@ def category_for_arxiv(
     lands in Multimodal AI, not whichever single-domain category happens to
     be listed first), tie-broken toward the more specific (fewer total
     tags) category, then by the category's stable display order.
+
+    Pass `cats` (already ordered by display_order) to skip the per-call query
+    when classifying many papers in one run.
     """
-    cats = db.execute(select(ResearchCategory).order_by(ResearchCategory.display_order)).scalars().all()
+    if cats is None:
+        cats = db.execute(select(ResearchCategory).order_by(ResearchCategory.display_order)).scalars().all()
     if not cats:
         return None
     by_slug = {c.slug: c for c in cats}

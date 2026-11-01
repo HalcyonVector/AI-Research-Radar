@@ -48,9 +48,9 @@ services:
       - key: AI_MODE
         value: cloud
       - key: GEMINI_MODEL
-        value: gemini-2.0-flash
+        value: gemini-2.5-flash   # gemini-2.0-flash is retired
       - key: EMBEDDING_PROVIDER
-        value: gemini          # text-embedding-004, truncated to 384d via
+        value: gemini          # gemini-embedding-001, truncated to 384d via
                                 # outputDimensionality (see src/ai/embeddings.py).
                                 # NOT "local": sentence-transformers needs PyTorch,
                                 # whose import alone can burn 100-300MB+ on first

@@ -29,21 +29,33 @@ def embed_text(text: str) -> list[float]:
     return embed_texts([text])[0]
 
 
+GEMINI_EMBED_MODEL = "gemini-embedding-001"
+GEMINI_BATCH = 100  # batchEmbedContents' per-request cap
+
+
 def _embed_gemini(texts: list[str]) -> list[list[float]]:
+    """gemini-embedding-001 via batchEmbedContents (text-embedding-004 was
+    retired, which is why every paper since the switch to gemini had a NULL
+    embedding). outputDimensionality (MRL truncation) keeps vectors at
+    settings.embedding_dim (384) so they fit the existing pgvector column;
+    truncated vectors aren't unit-length, so they're re-normalized here."""
+    import math
     import requests
+    from src.ai.llm import _post_with_retry
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_EMBED_MODEL}:batchEmbedContents?key={settings.gemini_api_key}"
+    )
     out = []
-    for t in texts:
-        url = (
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"text-embedding-004:embedContent?key={settings.gemini_api_key}"
-        )
-        # outputDimensionality (MRL truncation) keeps this at settings.embedding_dim
-        # (384) so it drops into the existing pgvector column with no migration,
-        # even though text-embedding-004's native output is larger.
-        r = requests.post(url, json={
-            "content": {"parts": [{"text": t}]},
+    for i in range(0, len(texts), GEMINI_BATCH):
+        reqs = [{
+            "model": f"models/{GEMINI_EMBED_MODEL}",
+            "content": {"parts": [{"text": t[:8000]}]},
             "outputDimensionality": settings.embedding_dim,
-        }, timeout=60)
-        r.raise_for_status()
-        out.append(r.json()["embedding"]["values"])
+        } for t in texts[i:i + GEMINI_BATCH]]
+        r = _post_with_retry(url, json={"requests": reqs}, timeout=120, max_retries=3)
+        for e in r.json()["embeddings"]:
+            v = e["values"]
+            norm = math.sqrt(sum(x * x for x in v)) or 1.0
+            out.append([x / norm for x in v])
     return out

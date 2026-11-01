@@ -11,6 +11,7 @@ from src.config import settings
 # Task modules must be imported explicitly so every worker registers them.
 # (autodiscover_tasks defaults to a `tasks` submodule, which this project doesn't use.)
 TASK_MODULES = [
+    "src.workers.ai.backfill",
     "src.workers.ai.briefing",
     "src.workers.ai.embedding",
     "src.workers.ai.summary",

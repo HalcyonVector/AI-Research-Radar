@@ -1,4 +1,5 @@
 """arXiv ingestion pipeline (spec 5.2)."""
+import calendar
 import logging
 import time
 import feedparser
@@ -6,31 +7,16 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from src.celery_app import celery_app
 from src.database import session_scope
-from src.models import Paper, PaperAuthor, PaperCategory
-from src.redis_client import redis_client
+from src.models import Paper, PaperAuthor, PaperCategory, ResearchCategory
 from src.utils.text import normalize_whitespace
-from src.workers.ingestion.common import get_or_create_author, category_for_arxiv
+from src.workers.ingestion.common import get_or_create_authors, category_for_arxiv
 
 logger = logging.getLogger(__name__)
 
 ARXIV_URL = "http://export.arxiv.org/api/query"
 CATEGORIES = ["cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.NE", "cs.RO", "stat.ML", "eess.AS", "cs.IR", "cs.MA"]
 MAX_RESULTS = 100
-DEDUP_SET = "arxiv:seen"
-
-
-def _seen(arxiv_id: str) -> bool:
-    try:
-        return bool(redis_client.sismember(DEDUP_SET, arxiv_id))
-    except Exception:
-        return False
-
-
-def _mark(arxiv_id: str) -> None:
-    try:
-        redis_client.sadd(DEDUP_SET, arxiv_id)
-    except Exception:
-        pass
+COMMIT_EVERY = 20
 
 
 def fetch_recent(category: str, max_results: int = MAX_RESULTS) -> list[dict]:
@@ -45,8 +31,8 @@ def fetch_recent(category: str, max_results: int = MAX_RESULTS) -> list[dict]:
             "arxiv_id": arxiv_id,
             "title": normalize_whitespace(e.get("title", "")),
             "abstract": normalize_whitespace(e.get("summary", "")),
-            "published": e.get("published"),
-            "updated": e.get("updated"),
+            "published": e.get("published_parsed"),
+            "updated": e.get("updated_parsed"),
             "authors": [a.get("name") for a in e.get("authors", [])],
             "pdf_url": next((link.get("href") for link in e.get("links", []) if link.get("type") == "application/pdf"), None),
             "html_url": raw_id,
@@ -57,40 +43,34 @@ def fetch_recent(category: str, max_results: int = MAX_RESULTS) -> list[dict]:
     return out
 
 
-def _parse_dt(s: str | None):
-    if not s:
+def _parse_dt(t):
+    """feedparser's *_parsed fields are UTC struct_times. (This used to call
+    feedparser._parse_date, which feedparser 6 no longer exposes, so every
+    paper silently got published_at = ingest time.)"""
+    if not t:
         return datetime.now(timezone.utc)
-    try:
-        return datetime(*feedparser._parse_date(s)[:6], tzinfo=timezone.utc)
-    except Exception:
-        return datetime.now(timezone.utc)
+    return datetime.fromtimestamp(calendar.timegm(t), tz=timezone.utc)
 
 
 @celery_app.task(name="workers.ingestion.arxiv.run", bind=True, max_retries=3)
 def run(self, max_results: int = MAX_RESULTS):
-    """Per-category retry is a plain bounded loop with a real sleep, not
-    self.retry() -- see workers.ingestion.github.crawl's docstring for why:
-    self.retry() misbehaves when invoked synchronously via .delay() with no
-    real Celery worker/broker behind it (this whole deployment runs
-    CELERY_EAGER=true), and raising it from inside a request handler produced
-    an unexplained 502 the one time that path actually got exercised. A
-    failed category here just gets skipped for this run rather than
-    aborting the other 9 categories behind it.
+    """Insert new papers only. Embeddings and AI summaries are no longer
+    generated inline per paper: under CELERY_EAGER every .delay() was a
+    synchronous Gemini round trip (with up to minutes of 429 backoff) inside
+    this loop. workers.ai.backfill.run fills them in batches afterwards.
 
-    Also periodically clears the SQLAlchemy session's identity map (every
-    EXPUNGE_EVERY papers). This one call can process a large real backlog in
-    a single request -- everything since ingestion last actually worked, per
-    the dormancy this whole deployment saga uncovered -- and every Paper,
-    Author, and PaperAuthor object stays resident in that one session for
-    the entire multi-category loop otherwise. On a 512MB free-tier instance
-    that's a plausible, still-unconfirmed OOM driver behind arxiv's
-    unexplained 502 (embeddings were ruled out: this project already uses
-    the Gemini provider, not local sentence-transformers). Cheap to guard
-    against regardless of whether it's the actual cause."""
-    EXPUNGE_EVERY = 20
+    Round trips matter more than anything else here (Postgres is remote), so
+    dedup is one IN query per category instead of a Redis SISMEMBER plus a
+    SELECT per paper, and authors are looked up in one query per paper.
+
+    Per-category retry is a plain bounded loop with a real sleep, not
+    self.retry() -- see workers.ingestion.github.crawl's docstring for why."""
     ingested = 0
     db = session_scope()
     try:
+        cats = db.execute(select(ResearchCategory).order_by(ResearchCategory.display_order)).scalars().all()
+        for c in cats:
+            db.expunge(c)  # keep them loaded across commits/expunge_all below
         for category in CATEGORIES:
             papers = None
             for attempt in range(3):
@@ -104,14 +84,13 @@ def run(self, max_results: int = MAX_RESULTS):
                         papers = []
                         break
                     time.sleep(min(2 * 2 ** attempt, 30))
+            ids = [pd["arxiv_id"] for pd in papers if pd["arxiv_id"]]
+            existing = set(db.execute(select(Paper.arxiv_id).where(Paper.arxiv_id.in_(ids))).scalars()) if ids else set()
             for pd in papers:
-                if not pd["arxiv_id"] or _seen(pd["arxiv_id"]):
+                if not pd["arxiv_id"] or pd["arxiv_id"] in existing:
                     continue
-                existing = db.execute(select(Paper).where(Paper.arxiv_id == pd["arxiv_id"])).scalar_one_or_none()
-                if existing:
-                    _mark(pd["arxiv_id"])
-                    continue
-                cat = category_for_arxiv(db, pd["categories"], pd["title"], pd["abstract"])
+                existing.add(pd["arxiv_id"])  # same paper is often cross-listed in several categories
+                cat = category_for_arxiv(db, pd["categories"], pd["title"], pd["abstract"], cats=cats)
                 paper = Paper(
                     arxiv_id=pd["arxiv_id"], title=pd["title"], abstract=pd["abstract"] or pd["title"],
                     published_at=_parse_dt(pd["published"]), updated_at_source=_parse_dt(pd["updated"]),
@@ -121,23 +100,16 @@ def run(self, max_results: int = MAX_RESULTS):
                 )
                 db.add(paper)
                 db.flush()
-                for i, aname in enumerate(pd["authors"][:30]):
-                    if not aname:
-                        continue
-                    author = get_or_create_author(db, aname)
+                for i, author in enumerate(get_or_create_authors(db, [a for a in pd["authors"][:30] if a])):
                     db.add(PaperAuthor(paper_id=paper.id, author_id=author.id, position=i + 1))
                 if cat:
                     db.add(PaperCategory(paper_id=paper.id, category_id=cat.id, is_primary=True, source="arxiv"))
-                db.commit()
-                _mark(pd["arxiv_id"])
                 ingested += 1
-                # enqueue enrichment
-                from src.workers.ai.embedding import generate as gen_emb
-                from src.workers.ai.summary import generate as gen_sum
-                gen_emb.delay(str(paper.id))
-                gen_sum.delay(str(paper.id))
-                if ingested % EXPUNGE_EVERY == 0:
+                if ingested % COMMIT_EVERY == 0:
+                    db.commit()
                     db.expunge_all()
+            db.commit()
+            logger.info("arxiv.run: %s done, %d new so far", category, ingested)
         return {"ingested": ingested}
     finally:
         db.close()
