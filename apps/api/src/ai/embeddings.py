@@ -40,7 +40,6 @@ def _embed_gemini(texts: list[str]) -> list[list[float]]:
     settings.embedding_dim (384) so they fit the existing pgvector column;
     truncated vectors aren't unit-length, so they're re-normalized here."""
     import math
-    import requests
     from src.ai.llm import _post_with_retry
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
