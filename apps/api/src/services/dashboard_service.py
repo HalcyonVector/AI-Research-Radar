@@ -1,15 +1,21 @@
 from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select, desc, func
 from sqlalchemy.orm import Session, selectinload
-from src.models import Paper, Model, ResearchCategory, Repository
+from src.models import Paper, PaperAuthor, Model, ResearchCategory, Repository
 from src.models.intelligence.paper_intelligence_scores import PaperIntelligenceScores
 from src.models import WeeklyReport
 from src.services import serializers as S
 from src.services.trend_service import list_trends
 
 
+def _briefing_title(report) -> str:
+    stories = (report.briefing_json or {}).get("big_stories") or []
+    first = stories[0].get("title") if stories and isinstance(stories[0], dict) else None
+    return first or f"Week of {report.week_start.strftime('%b %d, %Y')}"
+
+
 def dashboard(db: Session) -> dict:
-    trending = db.execute(select(Paper).options(selectinload(Paper.authors), selectinload(Paper.primary_category))
+    trending = db.execute(select(Paper).options(selectinload(Paper.authors).selectinload(PaperAuthor.author), selectinload(Paper.primary_category))
                           .order_by(desc(Paper.composite_score)).limit(10)).scalars().all()
     breakout = db.execute(select(Model).order_by(desc(Model.growth_score)).limit(6)).scalars().all()
     emerging = list_trends(db)["data"][:5]
@@ -27,19 +33,30 @@ def dashboard(db: Session) -> dict:
     # before the earliest paper we've ever ingested — otherwise a young dataset
     # renders as mostly-blank weeks that look like a broken/empty chart rather
     # than "the app hasn't been running long enough to have that history".
+    # One grouped query by day instead of a count(*) per category per week.
     heatmap = []
     earliest_published = db.scalar(select(func.min(Paper.published_at)))
     cats = db.execute(select(ResearchCategory).order_by(ResearchCategory.display_order).limit(8)).scalars().all()
+    today = date.today()
+    window_start = today - timedelta(days=8 * 7)
+    day = func.date(Paper.published_at)
+    per_day = db.execute(
+        select(Paper.primary_category_id, day, func.count())
+        .where(Paper.primary_category_id.in_([c.id for c in cats]),
+               Paper.published_at >= window_start, Paper.published_at < today)
+        .group_by(Paper.primary_category_id, day)
+    ).all()
+    counts: dict = {}
+    for cat_id, d, n in per_day:
+        w = ((today - d).days - 1) // 7  # same [start, end) weeks as below
+        counts[(cat_id, w)] = counts.get((cat_id, w), 0) + n
     for c in cats:
         for w in range(8):
-            start = date.today() - timedelta(days=(w + 1) * 7)
-            end = date.today() - timedelta(days=w * 7)
+            start = today - timedelta(days=(w + 1) * 7)
+            end = today - timedelta(days=w * 7)
             if earliest_published and end <= earliest_published.date():
                 continue
-            cnt = db.scalar(select(func.count()).select_from(Paper)
-                            .where(Paper.primary_category_id == c.id,
-                                   Paper.published_at >= start, Paper.published_at < end)) or 0
-            heatmap.append({"category_slug": c.slug, "date": start.isoformat(), "count": cnt})
+            heatmap.append({"category_slug": c.slug, "date": start.isoformat(), "count": counts.get((c.id, w), 0)})
 
     # This-week counters + newest additions (both were missing, so those cards read 0).
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
@@ -67,7 +84,8 @@ def dashboard(db: Session) -> dict:
             "breakthrough_driver": s.breakthrough_driver, "ai_rationale": s.ai_rationale,
         } for s, p in giants],
         "latest_briefing_preview": (
-            {"week_start": latest.week_start.isoformat(), "excerpt": (latest.briefing_md or "")[:400]}
+            {"week_start": latest.week_start.isoformat(), "title": _briefing_title(latest),
+             "excerpt": (latest.briefing_md or "")[:400]}
             if latest else None
         ),
         "heatmap_data": heatmap,
@@ -80,7 +98,7 @@ def whats_new(db: Session, days: int = 1) -> dict:
     since = datetime.now(timezone.utc) - timedelta(days=days)
 
     papers = db.execute(
-        select(Paper).options(selectinload(Paper.authors), selectinload(Paper.primary_category))
+        select(Paper).options(selectinload(Paper.authors).selectinload(PaperAuthor.author), selectinload(Paper.primary_category))
         .where(Paper.created_at >= since).order_by(desc(Paper.created_at)).limit(20)
     ).scalars().all()
     models = db.execute(

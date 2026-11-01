@@ -71,6 +71,40 @@ def chat(paper_id: str, body: ChatRequest, db: Session = Depends(get_db)):
     return r
 
 
+# Visitor-triggered summaries share Groq's ~1K requests/day heavy-lane quota
+# with the 6-hourly backfill (60/day) and Layer-3 jobs, so cap them globally.
+ON_DEMAND_SUMMARIES_PER_DAY = 150
+
+
+@router.post("/{paper_id}/summarize")
+def summarize(paper_id: str, db: Session = Depends(get_db)):
+    """Generate the AI summary for a paper that doesn't have one yet."""
+    from datetime import date
+    from src.redis_client import redis_client
+    from src.workers.ai.summary import generate as gen
+    p = paper_service.get_paper(db, paper_id)
+    if not p:
+        raise HTTPException(404, "Paper not found")
+    if p.get("ai_summary"):
+        return p["ai_summary"]
+    try:
+        key = f"summarize:on-demand:{date.today().isoformat()}"
+        used = redis_client.incr(key)
+        if used == 1:
+            redis_client.expire(key, 2 * 86400)
+    except Exception:
+        used = 0  # Redis down: let it through; Groq's own limit still applies
+    if used > ON_DEMAND_SUMMARIES_PER_DAY:
+        raise HTTPException(429, "Today's on-demand summary budget is used up. "
+                                 "This paper will be summarized automatically within a few days.")
+    result = gen.run(paper_id)
+    db.expire_all()
+    p = paper_service.get_paper(db, paper_id)
+    if not result.get("ok") or not p or not p.get("ai_summary"):
+        raise HTTPException(502, "The summarizer couldn't process this paper right now. Try again later.")
+    return p["ai_summary"]
+
+
 @router.post("/{paper_id}/summary/regenerate", dependencies=[Depends(require_admin)])
 def regenerate(paper_id: str, db: Session = Depends(get_db)):
     from src.workers.ai.summary import generate as gen

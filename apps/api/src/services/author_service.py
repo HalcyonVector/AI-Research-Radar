@@ -19,7 +19,7 @@ def get_author(db: Session, author_id: str) -> dict | None:
 
     rows = db.execute(
         select(Paper)
-        .options(selectinload(Paper.authors), selectinload(Paper.primary_category))
+        .options(selectinload(Paper.authors).selectinload(PaperAuthor.author), selectinload(Paper.primary_category))
         .join(PaperAuthor, PaperAuthor.paper_id == Paper.id)
         .where(PaperAuthor.author_id == a.id)
         .order_by(desc(Paper.composite_score), Paper.id)

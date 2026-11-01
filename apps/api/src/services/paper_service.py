@@ -1,7 +1,7 @@
 from sqlalchemy import select, func, text, desc
 from sqlalchemy.orm import Session, selectinload
 
-from src.models import Paper, PaperCategory, ResearchCategory, PaperConceptComposition
+from src.models import Paper, PaperAuthor, PaperCategory, ResearchCategory, PaperConceptComposition
 from src.services import serializers as S
 from src.utils.pagination import encode_cursor, decode_cursor
 
@@ -23,7 +23,7 @@ def list_papers(db: Session, q=None, category=None, date_from=None, date_to=None
                 sort="composite", has_summary=None, cursor=None, limit=20) -> dict:
     limit = max(1, min(limit, 100))
     sort = SORT_MAP.get(sort, DEFAULT_SORT)
-    stmt = select(Paper).options(selectinload(Paper.authors), selectinload(Paper.primary_category))
+    stmt = select(Paper).options(selectinload(Paper.authors).selectinload(PaperAuthor.author), selectinload(Paper.primary_category))
 
     if category:
         stmt = stmt.join(PaperCategory, PaperCategory.paper_id == Paper.id)\
