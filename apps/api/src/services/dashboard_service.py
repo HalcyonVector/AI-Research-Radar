@@ -14,6 +14,10 @@ def _briefing_title(report) -> str:
     return first or f"Week of {report.week_start.strftime('%b %d, %Y')}"
 
 
+def _iso(dt) -> str | None:
+    return dt.isoformat() if dt else None
+
+
 def dashboard(db: Session) -> dict:
     trending = db.execute(select(Paper).options(selectinload(Paper.authors).selectinload(PaperAuthor.author), selectinload(Paper.primary_category))
                           .order_by(desc(Paper.composite_score)).limit(10)).scalars().all()
@@ -72,7 +76,19 @@ def dashboard(db: Session) -> dict:
         .order_by(desc(Model.ingested_at)).limit(5)
     ).scalars().all()
 
+    # Freshness: when each source last delivered data, so a silently broken
+    # ingest shows on the page instead of going unnoticed for days.
+    paper_ingested, newest_paper = db.execute(
+        select(func.max(Paper.ingested_at), func.max(Paper.published_at))).one()
+    freshness = {
+        "papers_ingested_at": _iso(paper_ingested),
+        "newest_paper_published_at": _iso(newest_paper),
+        "models_updated_at": _iso(db.scalar(select(func.max(Model.updated_at)))),
+        "repos_updated_at": _iso(db.scalar(select(func.max(Repository.updated_at)))),
+    }
+
     return {
+        "freshness": freshness,
         "trending_papers": [S.paper_list_item(p) for p in trending],
         "emerging_categories": emerging,
         "breakout_models": [S.model_item(m) for m in breakout],

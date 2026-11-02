@@ -20,11 +20,11 @@ CACHE_TTL = 900  # 15 min -- comfortably longer than the 10-min keep-warm cron
 
 @router.get("")
 def dashboard(db: Session = Depends(get_db)):
-    hit = cache_get("dashboard:v1")
+    hit = cache_get("dashboard:v2")
     if hit:
         return hit
     data = dashboard_service.dashboard(db)
-    cache_set("dashboard:v1", data, ttl=CACHE_TTL)
+    cache_set("dashboard:v2", data, ttl=CACHE_TTL)
     return data
 
 

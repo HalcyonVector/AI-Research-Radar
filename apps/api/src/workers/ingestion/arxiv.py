@@ -4,8 +4,8 @@ import logging
 import time
 import feedparser
 import requests
-from datetime import datetime, timezone
-from sqlalchemy import select
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import func, select
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper, PaperAuthor, PaperCategory, ResearchCategory
@@ -19,6 +19,10 @@ ARXIV_UA = "AI-Research-Radar/1.0 (https://github.com/HalcyonVector/AI-Research-
 CATEGORIES = ["cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.NE", "cs.RO", "stat.ML", "eess.AS", "cs.IR", "cs.MA"]
 MAX_RESULTS = 100
 COMMIT_EVERY = 20
+# arXiv announces Sunday-Thursday nights, so the newest paper is normally at most
+# ~3.5 days old; past this the job fails, which fails the workflow and GitHub
+# emails the repo owner. (Long holiday breaks can trip it once.)
+STALE_AFTER = timedelta(days=5)
 
 
 def fetch_recent(category: str, max_results: int = MAX_RESULTS) -> list[dict]:
@@ -77,6 +81,7 @@ def run(self, max_results: int = MAX_RESULTS):
     Per-category retry is a plain bounded loop with a real sleep, not
     self.retry() -- see workers.ingestion.github.crawl's docstring for why."""
     ingested = 0
+    failed = []
     db = session_scope()
     try:
         cats = db.execute(select(ResearchCategory).order_by(ResearchCategory.display_order)).scalars().all()
@@ -93,6 +98,7 @@ def run(self, max_results: int = MAX_RESULTS):
                         print(f"::warning::arxiv.run: giving up on {category} after 3 attempts: {exc}",
                               flush=True)
                         papers = []
+                        failed.append(category)
                         break
                     time.sleep(min(10 * 2 ** attempt, 60))
             ids = [pd["arxiv_id"] for pd in papers if pd["arxiv_id"]]
@@ -121,6 +127,12 @@ def run(self, max_results: int = MAX_RESULTS):
                     db.expunge_all()
             db.commit()
             print(f"arxiv.run: {category}: fetched {len(papers)}, {ingested} new so far", flush=True)
-        return {"ingested": ingested}
+        if len(failed) == len(CATEGORIES):
+            raise RuntimeError(f"arXiv fetch failed for every category ({ingested} ingested)")
+        newest = db.scalar(select(func.max(Paper.published_at)).where(Paper.source == "arxiv"))
+        if newest is None or datetime.now(timezone.utc) - newest > STALE_AFTER:
+            raise RuntimeError(f"newest arXiv paper is from {newest}; ingest looks stale "
+                               f"(failed categories: {failed or 'none'})")
+        return {"ingested": ingested, "failed_categories": failed}
     finally:
         db.close()

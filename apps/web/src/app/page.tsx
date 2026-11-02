@@ -14,6 +14,7 @@ import { ActivityHeatmap } from "@/components/dashboard/ActivityHeatmap";
 import { SleepingGiantsPanel } from "@/components/dashboard/SleepingGiantsPanel";
 import { RecentReposPanel } from "@/components/dashboard/RecentReposPanel";
 import { SinceLastVisit } from "@/components/dashboard/SinceLastVisit";
+import { FreshnessStatus } from "@/components/dashboard/FreshnessStatus";
 
 export default function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboard();
@@ -34,6 +35,7 @@ export default function DashboardPage() {
         eyebrow="Overview"
         title="Research Radar"
         description="A continuously updated intelligence layer over the global AI research ecosystem."
+        actions={<FreshnessStatus freshness={data?.freshness} />}
       />
 
       <SinceLastVisit />

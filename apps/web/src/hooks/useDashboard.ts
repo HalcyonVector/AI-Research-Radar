@@ -5,6 +5,7 @@ import { fetchJson } from "@/lib/client";
 import type { Paper } from "@/types/paper";
 import type { Model } from "@/types/model";
 import type { Trend } from "@/types/trend";
+import type { Freshness } from "@/components/dashboard/FreshnessStatus";
 
 export interface HeatmapCell {
   category_slug: string;
@@ -13,6 +14,7 @@ export interface HeatmapCell {
 }
 
 export interface DashboardData {
+  freshness?: Freshness;
   trending_papers: Paper[];
   emerging_categories: Trend[];
   breakout_models: Model[];
