@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/layout/ErrorState";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { useCompare } from "@/hooks/useCompare";
+import { ComparePicker } from "@/components/papers/ComparePicker";
 import { formatCompact, formatDate } from "@/lib/formatters";
 import type { CompareDnaEntry, PaperDetail } from "@/types/paper";
 
@@ -50,12 +51,7 @@ function CompareBody({ ids }: { ids: string[] }) {
   const { data, isLoading, isError, refetch } = useCompare(ids);
 
   if (ids.length === 0) {
-    return (
-      <EmptyState
-        title="Nothing to compare"
-        description="Add paper ids to the URL, e.g. /compare?ids=paper-1,paper-2"
-      />
-    );
+    return <ComparePicker />;
   }
 
   if (isLoading) {

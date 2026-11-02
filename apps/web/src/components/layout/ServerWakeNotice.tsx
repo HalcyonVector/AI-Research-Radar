@@ -9,7 +9,9 @@ const SHOW_AFTER_MS = 4000;
  * minute to wake. If requests are still pending after a few seconds, say so
  * instead of leaving a page of skeletons that looks broken. */
 export function ServerWakeNotice() {
-  const fetching = useIsFetching() > 0;
+  // Only requests the current page is waiting on: a slow request left over
+  // from the previous page shouldn't put the notice over a page that's done.
+  const fetching = useIsFetching({ predicate: (q) => q.getObserversCount() > 0 }) > 0;
   const [show, setShow] = useState(false);
 
   useEffect(() => {
