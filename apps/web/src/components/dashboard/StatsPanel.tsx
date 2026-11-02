@@ -1,13 +1,13 @@
 "use client";
 
-import { FileText, Boxes, GitFork, Zap, type LucideIcon } from "lucide-react";
+import { FileText, Boxes, GitFork, Sparkles, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SectionHeader } from "@/components/layout/PageHeader";
 import { formatCompact } from "@/lib/formatters";
 
 interface StatsPanelProps {
-  stats: { papers: number; models: number; repos: number; breakthroughs: number };
+  stats: { papers: number; models: number; repos: number; summarized: number };
   loading?: boolean;
 }
 
@@ -38,21 +38,16 @@ function StatTile({
 }
 
 export function StatsPanel({ stats, loading }: StatsPanelProps) {
-  const s = stats ?? { papers: 0, models: 0, repos: 0, breakthroughs: 0 };
+  const s = stats ?? { papers: 0, models: 0, repos: 0, summarized: 0 };
 
   return (
     <Card className="flex h-full flex-col">
       <SectionHeader title="This Week in Numbers" />
       <div className="grid flex-1 grid-cols-2 gap-3">
-        <StatTile icon={FileText} value={s.papers} label="Papers" loading={loading} />
-        <StatTile icon={Boxes} value={s.models} label="Models" loading={loading} />
-        <StatTile icon={GitFork} value={s.repos} label="Repos" loading={loading} />
-        <StatTile
-          icon={Zap}
-          value={s.breakthroughs}
-          label="Breakthroughs"
-          loading={loading}
-        />
+        <StatTile icon={FileText} value={s.papers} label="New papers" loading={loading} />
+        <StatTile icon={Boxes} value={s.models} label="New models" loading={loading} />
+        <StatTile icon={GitFork} value={s.repos} label="New repos" loading={loading} />
+        <StatTile icon={Sparkles} value={s.summarized} label="Papers summarized" loading={loading} />
       </div>
     </Card>
   );

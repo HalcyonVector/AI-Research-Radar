@@ -72,7 +72,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
     categories.length + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (hasSummary ? 1 : 0);
 
   return (
-    <div className="mb-6 rounded-xl border border-[var(--border-base)] bg-[var(--bg-surface)] p-4">
+    <div className="mb-6 border border-[var(--rule)] bg-[var(--bg-surface)] p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         {/* Search */}
         <div className="relative min-w-0 flex-1">
@@ -85,7 +85,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search papers, concepts, authors…"
-            className="h-9 w-full rounded-lg border border-[var(--border-base)] bg-[var(--bg-base)] pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors focus:border-[var(--accent-primary)]"
+            className="h-9 w-full border border-[var(--rule)] bg-[var(--bg-base)] pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none transition-colors focus:border-[var(--text-primary)]"
           />
         </div>
 
@@ -93,7 +93,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value)}
-          className="h-9 shrink-0 rounded-lg border border-[var(--border-base)] bg-[var(--bg-base)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--accent-primary)]"
+          className="h-9 shrink-0 border border-[var(--rule)] bg-[var(--bg-base)] px-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--text-primary)]"
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -112,7 +112,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
           <SlidersHorizontal size={14} />
           Categories
           {categories.length > 0 && (
-            <span className="ml-1 rounded-full bg-[var(--accent-primary)] px-1.5 text-[10px] font-semibold text-[var(--bg-base)]">
+            <span className="ml-1 bg-[var(--text-primary)] px-1.5 text-[10px] font-semibold text-[var(--bg-base)]">
               {categories.length}
             </span>
           )}
@@ -121,7 +121,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
 
       {/* Category chips (collapsible) */}
       {showCategories && (
-        <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border-base)] pt-3 animate-fade-in">
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--rule)] pt-3 animate-fade-in">
           {CATEGORIES.map((cat) => {
             const active = categories.includes(cat.slug);
             const Icon = cat.icon;
@@ -130,16 +130,12 @@ export function FilterBar({ resultCount }: FilterBarProps) {
                 key={cat.slug}
                 onClick={() => toggleCategory(cat.slug)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-all",
+                  "inline-flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium transition-all",
                   active
-                    ? "text-white"
-                    : "border-[var(--border-base)] bg-[var(--bg-base)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
+                    ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-base)]"
+                    : "border-[var(--rule)] bg-[var(--bg-base)] text-[var(--text-secondary)] hover:border-[var(--rule-strong)] hover:text-[var(--text-primary)]"
                 )}
-                style={
-                  active
-                    ? { backgroundColor: cat.color, borderColor: cat.color }
-                    : undefined
-                }
+                aria-pressed={active}
               >
                 <Icon size={12} />
                 {cat.name}
@@ -150,7 +146,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
       )}
 
       {/* Secondary row: date range + has summary + clear + count */}
-      <div className="mt-3 flex flex-col gap-3 border-t border-[var(--border-base)] pt-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-3 flex flex-col gap-3 border-t border-[var(--rule)] pt-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
@@ -160,7 +156,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
               type="date"
               value={dateFrom ?? ""}
               onChange={(e) => setDateRange(e.target.value || null, dateTo)}
-              className="h-8 rounded-md border border-[var(--border-base)] bg-[var(--bg-base)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+              className="h-8 border border-[var(--rule)] bg-[var(--bg-base)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-primary)]"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -171,7 +167,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
               type="date"
               value={dateTo ?? ""}
               onChange={(e) => setDateRange(dateFrom, e.target.value || null)}
-              className="h-8 rounded-md border border-[var(--border-base)] bg-[var(--bg-base)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+              className="h-8 border border-[var(--rule)] bg-[var(--bg-base)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--text-primary)]"
             />
           </div>
 
@@ -180,9 +176,9 @@ export function FilterBar({ resultCount }: FilterBarProps) {
               type="checkbox"
               checked={hasSummary}
               onChange={(e) => setHasSummary(e.target.checked)}
-              className="h-3.5 w-3.5 accent-[var(--accent-primary)]"
+              className="h-3.5 w-3.5 accent-[var(--text-primary)]"
             />
-            <Sparkles size={12} className="text-[var(--accent-hover)]" />
+            <Sparkles size={12} className="text-[var(--text-tertiary)]" />
             Has AI summary
           </label>
         </div>

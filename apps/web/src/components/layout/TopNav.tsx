@@ -32,7 +32,7 @@ const NAV = [
   { href: "/briefings", label: "Briefings" },
   { href: "/compare", label: "Compare" },
   { href: "/watchlist", label: "Watchlist" },
-  { href: "/developers", label: "Developers" },
+  // Developers lives in the footer (AppShell); it's not a browsing destination.
 ];
 
 export function TopNav() {

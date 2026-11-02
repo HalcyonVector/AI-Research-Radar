@@ -28,7 +28,7 @@ export interface DashboardData {
     papers: number;
     models: number;
     repos: number;
-    breakthroughs: number;
+    summarized: number;
   };
   recently_added_models: Model[];
   sleeping_giants: unknown[];

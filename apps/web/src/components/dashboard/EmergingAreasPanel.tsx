@@ -17,8 +17,13 @@ interface EmergingAreasPanelProps {
 }
 
 export function EmergingAreasPanel({ trends, loading }: EmergingAreasPanelProps) {
+  // Several categories can sit at the ±100 cap together, so break ties by
+  // this week's paper count rather than leaving the order arbitrary.
   const top = [...(trends ?? [])]
-    .sort((a, b) => (b.scores?.growth ?? 0) - (a.scores?.growth ?? 0))
+    .sort(
+      (a, b) =>
+        (b.scores?.growth ?? 0) - (a.scores?.growth ?? 0) || (b.papers_7d ?? 0) - (a.papers_7d ?? 0)
+    )
     .slice(0, 6);
 
   return (
@@ -63,7 +68,12 @@ export function EmergingAreasPanel({ trends, loading }: EmergingAreasPanelProps)
                   color={cat?.color}
                   fill
                 />
-                <GrowthBadge value={trend.scores?.growth ?? null} />
+                <div className="flex w-16 shrink-0 flex-col items-end">
+                  <GrowthBadge value={trend.scores?.growth ?? null} />
+                  <span className="text-[10px] tabular-nums text-[var(--text-tertiary)]">
+                    {trend.papers_7d ?? 0} papers
+                  </span>
+                </div>
               </Link>
             );
           })}

@@ -31,13 +31,16 @@ def generate(self):
             return {"skipped": "exists"}
         since = datetime.now(timezone.utc) - timedelta(days=7)
         n_papers = db.scalar(select(func.count(Paper.id)).where(Paper.published_at >= since)) or 0
-        n_models = db.scalar(select(func.count(Model.id))) or 0
-        n_repos = db.scalar(select(func.count(Repository.id))) or 0
-        top = db.execute(select(Paper).order_by(desc(Paper.composite_score)).limit(5)).scalars().all()
+        # This week's additions only. These used to count every model and repo
+        # ever tracked, so the briefing reported e.g. "54,178 new models".
+        n_models = db.scalar(select(func.count(Model.id)).where(Model.ingested_at >= since)) or 0
+        n_repos = db.scalar(select(func.count(Repository.id)).where(Repository.ingested_at >= since)) or 0
+        top = db.execute(select(Paper).where(Paper.published_at >= since)
+                         .order_by(desc(Paper.composite_score)).limit(5)).scalars().all()
         models = db.execute(select(Model).order_by(desc(Model.growth_score)).limit(5)).scalars().all()
         ctx = dict(
             week_start=str(week_start), week_end=str(week_end),
-            numbers=f"{n_papers} papers, {n_models} models",
+            numbers=f"{n_papers} new papers, {n_models} new models, {n_repos} new repos",
             top_papers="; ".join(p.title for p in top),
             models="; ".join(m.name for m in models),
             category_deltas="see trend radar",

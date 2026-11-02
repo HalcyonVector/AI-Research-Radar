@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const breakoutModels = data?.breakout_models ?? [];
   const briefingPreview = data?.latest_briefing_preview ?? null;
   const heatmapData = data?.heatmap_data ?? [];
-  const stats = data?.stats ?? { papers: 0, models: 0, repos: 0, breakthroughs: 0 };
+  const stats = data?.stats ?? { papers: 0, models: 0, repos: 0, summarized: 0 };
   const recentModels = data?.recently_added_models ?? [];
   const recentRepos = whatsNewData?.repos ?? [];
 

@@ -32,6 +32,9 @@ export function GrowthBadge({ value, suffix = "", className, size = "sm" }: Grow
   const neutral = value === 0;
   const arrow = neutral ? "→" : positive ? "▲" : "▼";
   const color = positive ? "var(--text-primary)" : "var(--text-tertiary)";
+  // Growth scores are clamped to ±100, so a value there means "at least this
+  // much" rather than an exact figure.
+  const capped = Math.abs(value) >= 100;
 
   return (
     <span
@@ -41,9 +44,10 @@ export function GrowthBadge({ value, suffix = "", className, size = "sm" }: Grow
         className
       )}
       style={{ color }}
+      title={capped ? "Off the scale: growth scores are capped at ±100" : undefined}
     >
       <span className="text-[0.8em] leading-none">{arrow}</span>
-      {formatDelta(value)}
+      {capped ? "100+" : formatDelta(value)}
       {suffix}
     </span>
   );

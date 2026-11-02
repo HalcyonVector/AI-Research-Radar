@@ -19,7 +19,11 @@ def _iso(dt) -> str | None:
 
 
 def dashboard(db: Session) -> dict:
+    # Last 30 days: all-time ranking was mostly months-old papers, and global
+    # citation counts from Semantic Scholar push old papers up further.
+    month_ago = datetime.now(timezone.utc) - timedelta(days=30)
     trending = db.execute(select(Paper).options(selectinload(Paper.authors).selectinload(PaperAuthor.author), selectinload(Paper.primary_category))
+                          .where(Paper.published_at >= month_ago)
                           .order_by(desc(Paper.composite_score)).limit(10)).scalars().all()
     breakout = db.execute(select(Model).order_by(desc(Model.growth_score)).limit(6)).scalars().all()
     emerging = list_trends(db)["data"][:5]
@@ -68,8 +72,10 @@ def dashboard(db: Session) -> dict:
         "papers": db.scalar(select(func.count()).select_from(Paper).where(Paper.created_at >= week_ago)) or 0,
         "models": db.scalar(select(func.count()).select_from(Model).where(Model.ingested_at >= week_ago)) or 0,
         "repos": db.scalar(select(func.count()).select_from(Repository).where(Repository.ingested_at >= week_ago)) or 0,
-        "breakthroughs": db.scalar(select(func.count()).select_from(PaperIntelligenceScores)
-                                   .where(PaperIntelligenceScores.emerging_breakthrough_score > 0)) or 0,
+        # Replaces an all-time count of breakthrough_score > 0, which covered
+        # nearly every paper and so said nothing.
+        "summarized": db.scalar(select(func.count()).select_from(Paper)
+                                .where(Paper.ai_summary_generated_at >= week_ago)) or 0,
     }
     recent_models = db.execute(
         select(Model).where(Model.ai_summary.isnot(None))
