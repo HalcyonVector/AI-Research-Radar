@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     # Free data-source tokens (optional)
     hf_api_token: str = ""
     github_token: str = ""
+    # Optional free key (semanticscholar.org/product/api); without one, requests
+    # share a public pool that often answers 429.
+    semantic_scholar_api_key: str = ""
 
     # OpenAlex (free, no key) — author institutional affiliations per paper.
     # Setting a contact email moves requests into OpenAlex's faster "polite pool".

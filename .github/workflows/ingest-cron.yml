@@ -56,7 +56,8 @@ jobs:
   #   OPENAI_API_KEY  the Groq key Render uses (summaries)
   #   GEMINI_API_KEY  free key from aistudio.google.com (embeddings only;
   #                   Groq has no embeddings API)
-  # Optional: REDIS_URL, HF_API_TOKEN, GH_API_TOKEN (falls back to this
+  # Optional: REDIS_URL, HF_API_TOKEN, SEMANTIC_SCHOLAR_API_KEY (free; avoids
+  # the shared pool's 429s), GH_API_TOKEN (falls back to this
   # workflow's own token), OPENAI_BASE_URL (defaults to Groq).
   # Optional repo variables: AI_MODE (default openai), GEMINI_MODEL,
   # OPENAI_MODEL_HEAVY, OPENAI_MODEL_LIGHT.
@@ -88,6 +89,7 @@ jobs:
       EMBEDDING_PROVIDER: gemini
       EMBEDDING_DIM: "384"
       HF_API_TOKEN: ${{ secrets.HF_API_TOKEN }}
+      SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
       GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN || github.token }}
     steps:
       - uses: actions/checkout@v4
