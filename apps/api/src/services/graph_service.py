@@ -3,6 +3,10 @@ from sqlalchemy import select, or_, and_
 from sqlalchemy.orm import Session
 from src.models import KnowledgeGraphEdge, Paper, Author, Organization, Model, Repository, ResearchCategory
 
+# Intelligence chains (propagation, cross-pollination) store one row per step
+# with synthetic target ids; they are read via narrative_service, not drawn.
+CHAIN_RELATIONS = ("propagates_to", "cross_pollinates")
+
 _LABELERS = {
     "paper": (Paper, lambda o: o.title, lambda o: o.composite_score),
     "author": (Author, lambda o: o.name, lambda o: float(o.paper_count or 0)),
@@ -80,7 +84,7 @@ def traverse(db: Session, center_type: str, center_id: str, depth=2, edge_types=
                     and_(KnowledgeGraphEdge.source_type == ntype, KnowledgeGraphEdge.source_id == nid),
                     and_(KnowledgeGraphEdge.target_type == ntype, KnowledgeGraphEdge.target_id == nid),
                 )
-            ).limit(60)
+            ).where(KnowledgeGraphEdge.relation.notin_(CHAIN_RELATIONS)).limit(60)
             if edge_types:
                 stmt = stmt.where(KnowledgeGraphEdge.relation.in_(edge_types))
             for e in db.execute(stmt).scalars().all():

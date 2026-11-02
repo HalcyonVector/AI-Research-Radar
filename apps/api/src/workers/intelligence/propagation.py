@@ -1,4 +1,6 @@
 """Idea Propagation chains (spec 1.4.8.1). Walk citation graph forward, group by org."""
+import uuid
+
 from sqlalchemy import select
 from src.celery_app import celery_app
 from src.database import session_scope
@@ -16,19 +18,19 @@ def _org_name(db, paper: Paper) -> str | None:
     return None
 
 
-def _store_chain(db, seed_id, seed_label, chain: list[dict]):
-    db.execute(KnowledgeGraphEdge.__table__.delete().where(
-        (KnowledgeGraphEdge.relation == "propagates_to")))
-    for i in range(len(chain) - 1):
-        props = {"seed": str(seed_id), "seed_label": seed_label, "step": i + 1, **chain[i]}
-        db.add(KnowledgeGraphEdge(source_type="org", source_id=seed_id, target_type="org",
-               target_id=seed_id, relation="propagates_to", source="intelligence", properties=props))
+def _step_id(seed_id, step: int) -> uuid.UUID:
+    """Chain steps are stored as one edge row each, keyed by seed in
+    properties. The table is unique on (source, target, relation), so each
+    step gets its own deterministic target id; readers use only properties."""
+    return uuid.uuid5(seed_id, f"propagation-step-{step}")
 
 
 @celery_app.task(name="workers.intelligence.propagation.build_idea_propagation_chains")
 def build_idea_propagation_chains(top_seeds: int = 20):
     db = session_scope()
     try:
+        # Rebuilt from scratch each week.
+        db.execute(KnowledgeGraphEdge.__table__.delete().where(KnowledgeGraphEdge.relation == "propagates_to"))
         seeds = db.execute(select(Paper).order_by(Paper.composite_score.desc()).limit(top_seeds)).scalars().all()
         built = 0
         for seed in seeds:
@@ -49,7 +51,7 @@ def build_idea_propagation_chains(top_seeds: int = 20):
                 for i, step in enumerate(chain):
                     props = {"seed": str(seed.id), "seed_label": seed.title[:60], "step": i + 1, **step}
                     db.add(KnowledgeGraphEdge(source_type="paper", source_id=seed.id, target_type="paper",
-                           target_id=seed.id, relation="propagates_to", source="intelligence", properties=props))
+                           target_id=_step_id(seed.id, i + 1), relation="propagates_to", source="intelligence", properties=props))
                 built += 1
         db.commit()
         return {"chains": built}

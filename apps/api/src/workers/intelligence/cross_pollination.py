@@ -1,4 +1,6 @@
 """Cross-Pollination — carrier concepts across categories (spec 1.4.8.4)."""
+import uuid
+
 from sqlalchemy import select, func
 from src.celery_app import celery_app
 from src.database import session_scope
@@ -30,7 +32,7 @@ def detect_cross_pollination():
             arrivals.sort(key=lambda x: x[1])
             for i, (slug, first) in enumerate(arrivals):
                 db.add(KnowledgeGraphEdge(source_type="category", source_id=_zero(), target_type="category",
-                       target_id=_zero(), relation="cross_pollinates", source="intelligence",
+                       target_id=_arrival_id(concept, slug), relation="cross_pollinates", source="intelligence",
                        properties={"concept": concept, "category": slug, "step": i + 1,
                                    "arrival_date": first.date().isoformat() if first else None}))
             built += 1
@@ -41,5 +43,11 @@ def detect_cross_pollination():
 
 
 def _zero():
-    import uuid
     return uuid.UUID("00000000-0000-0000-0000-000000000000")
+
+
+def _arrival_id(concept: str, slug: str) -> uuid.UUID:
+    """One edge row per (concept, category) arrival. The table is unique on
+    (source, target, relation), so each row gets a deterministic target id;
+    readers use only properties."""
+    return uuid.uuid5(uuid.NAMESPACE_URL, f"cross-pollination:{concept}:{slug}")
