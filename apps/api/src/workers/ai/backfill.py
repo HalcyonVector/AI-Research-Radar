@@ -6,8 +6,10 @@ free tiers no matter how big the backlog is; anything left over is picked
 up by the next run (every 6h).
 
 Budget per 30-day month at the defaults below (4 runs/day):
-  embeddings (Gemini): <= 4 * EMBED_PER_RUN = 1600 texts/day in batches of
-              EMBED_BATCH, i.e. ~32 batch requests/day
+  embeddings (Gemini): <= 4 * EMBED_PER_RUN = 800 texts/day in batches of
+              EMBED_BATCH. The free tier counts every text in a batch against
+              its ~1K/day cap (400/run hit 429 on the third run of a day), and
+              the API's search-query embeddings share the same key.
   heavy lane (Groq gpt-oss-120b, ~1K req/day free): 4 * 15 = 60 paper
               summaries/day, leaving the rest for briefings / Layer-3
   light lane (Groq gpt-oss-20b, ~1K req/day free): 4 * (25 + 15) = 160
@@ -26,7 +28,7 @@ from src.models import Model, Paper, Repository
 
 logger = logging.getLogger(__name__)
 
-EMBED_PER_RUN = 400
+EMBED_PER_RUN = 200
 EMBED_BATCH = 50
 EMBED_SPACING_S = 20     # keeps a 50-abstract batch well under the free tokens-per-minute cap
 PAPER_SUMMARIES_PER_RUN = 15

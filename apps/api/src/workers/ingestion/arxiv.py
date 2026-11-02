@@ -3,6 +3,7 @@ import calendar
 import logging
 import time
 import feedparser
+import requests
 from datetime import datetime, timezone
 from sqlalchemy import select
 from src.celery_app import celery_app
@@ -13,16 +14,26 @@ from src.workers.ingestion.common import get_or_create_authors, category_for_arx
 
 logger = logging.getLogger(__name__)
 
-ARXIV_URL = "http://export.arxiv.org/api/query"
+ARXIV_URL = "https://export.arxiv.org/api/query"
+ARXIV_UA = "AI-Research-Radar/1.0 (https://github.com/HalcyonVector/AI-Research-Radar)"
 CATEGORIES = ["cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.NE", "cs.RO", "stat.ML", "eess.AS", "cs.IR", "cs.MA"]
 MAX_RESULTS = 100
 COMMIT_EVERY = 20
 
 
 def fetch_recent(category: str, max_results: int = MAX_RESULTS) -> list[dict]:
-    params = f"search_query=cat:{category}&start=0&max_results={max_results}&sortBy=submittedDate&sortOrder=descending"
+    params = {"search_query": f"cat:{category}", "start": 0, "max_results": max_results,
+              "sortBy": "submittedDate", "sortOrder": "descending"}
     time.sleep(3)  # arXiv TOS
-    feed = feedparser.parse(f"{ARXIV_URL}?{params}")
+    # Fetched with requests rather than feedparser.parse(url): feedparser turns
+    # a 429/503 or an HTML error page into an empty feed without raising, which
+    # made the job report {'ingested': 0} for days with nothing logged.
+    r = requests.get(ARXIV_URL, params=params, headers={"User-Agent": ARXIV_UA}, timeout=60)
+    r.raise_for_status()
+    feed = feedparser.parse(r.text)
+    if not feed.entries:
+        raise RuntimeError(f"arXiv returned no entries for {category} (HTTP {r.status_code}, "
+                           f"{len(r.text)} bytes): {r.text[:200]!r}")
     out = []
     for e in feed.entries:
         raw_id = e.get("id", "")
@@ -79,11 +90,11 @@ def run(self, max_results: int = MAX_RESULTS):
                     break
                 except Exception as exc:
                     if attempt == 2:
-                        logger.warning("arxiv.run: giving up on category %r after 3 attempts: %s",
-                                       category, exc)
+                        print(f"::warning::arxiv.run: giving up on {category} after 3 attempts: {exc}",
+                              flush=True)
                         papers = []
                         break
-                    time.sleep(min(2 * 2 ** attempt, 30))
+                    time.sleep(min(10 * 2 ** attempt, 60))
             ids = [pd["arxiv_id"] for pd in papers if pd["arxiv_id"]]
             existing = set(db.execute(select(Paper.arxiv_id).where(Paper.arxiv_id.in_(ids))).scalars()) if ids else set()
             for pd in papers:
@@ -109,7 +120,7 @@ def run(self, max_results: int = MAX_RESULTS):
                     db.commit()
                     db.expunge_all()
             db.commit()
-            logger.info("arxiv.run: %s done, %d new so far", category, ingested)
+            print(f"arxiv.run: {category}: fetched {len(papers)}, {ingested} new so far", flush=True)
         return {"ingested": ingested}
     finally:
         db.close()
