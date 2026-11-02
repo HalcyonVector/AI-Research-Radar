@@ -20,6 +20,12 @@ def list_watches(db: Session = Depends(get_db), client_key: str = Depends(get_cl
     return watch_service.list_watches(db, client_key)
 
 
+@router.get("/unread")
+def unread_counts(db: Session = Depends(get_db), client_key: str = Depends(get_client_key)):
+    """New-paper count per watch; unlike /digest this doesn't mark them seen."""
+    return watch_service.unread_counts(db, client_key)
+
+
 @router.post("")
 def create_watch(body: WatchCreate, db: Session = Depends(get_db),
                  client_key: str = Depends(get_client_key)):

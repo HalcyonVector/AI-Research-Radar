@@ -6,7 +6,21 @@ import { useEffect, useState } from "react";
 import { Menu, Moon, Sun, X } from "lucide-react";
 import { useCommandPalette } from "@/components/providers/CommandPaletteProvider";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { useWatchUnread } from "@/hooks/useWatches";
 import { cn } from "@/lib/utils";
+
+/** New papers across the visitor's watches, shown beside "Watchlist". */
+function UnreadBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className="ml-1.5 inline-flex min-w-[18px] items-center justify-center bg-[var(--text-primary)] px-1 font-mono text-[10px] leading-[16px] text-[var(--bg-base)]"
+      aria-label={`${count} new papers in your watches`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
 
 const NAV = [
   { href: "/", label: "Dashboard" },
@@ -26,6 +40,8 @@ export function TopNav() {
   const { setOpen } = useCommandPalette();
   const { theme, toggle } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const unread = useWatchUnread().data?.total ?? 0;
+  const badgeFor = (href: string) => (href === "/watchlist" ? <UnreadBadge count={unread} /> : null);
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   // Close the mobile menu after navigating.
@@ -59,6 +75,7 @@ export function TopNav() {
                   )}
                 >
                   {item.label}
+                  {badgeFor(item.href)}
                 </Link>
               </span>
             ))}
@@ -114,6 +131,7 @@ export function TopNav() {
                 )}
               >
                 {item.label}
+                {badgeFor(item.href)}
               </Link>
             ))}
           </nav>

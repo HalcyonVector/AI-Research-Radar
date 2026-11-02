@@ -14,6 +14,7 @@ import {
   useCreateWatch,
   useDeleteWatch,
   useWatchDigest,
+  useWatchUnread,
 } from "@/hooks/useWatches";
 import { useBookmarks, useDeleteBookmark } from "@/hooks/useBookmarks";
 import { CATEGORIES } from "@/lib/constants";
@@ -108,13 +109,20 @@ function DigestExpander({ watchId }: { watchId: string }) {
   );
 }
 
-function WatchRow({ watch }: { watch: Watch }) {
+function WatchRow({ watch, unread }: { watch: Watch; unread?: number }) {
   const remove = useDeleteWatch();
   return (
     <Card>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-[var(--text-primary)]">{watch.label}</p>
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            {watch.label}
+            {!!unread && (
+              <span className="ml-2 bg-[var(--text-primary)] px-1.5 py-px font-mono text-[10px] text-[var(--bg-base)]">
+                {unread > 99 ? "99+" : unread} new
+              </span>
+            )}
+          </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-tertiary)]">
             {watch.query && (
               <span className="font-mono">
@@ -146,6 +154,7 @@ function WatchesSection() {
   const { data, isLoading, isError, refetch } = useWatches();
   const create = useCreateWatch();
   const watches = data?.data ?? [];
+  const unread = useWatchUnread(watches.length > 0).data?.data;
 
   const [label, setLabel] = useState("");
   const [query, setQuery] = useState("");
@@ -243,7 +252,7 @@ function WatchesSection() {
       ) : (
         <div className="space-y-3">
           {watches.map((w) => (
-            <WatchRow key={w.id} watch={w} />
+            <WatchRow key={w.id} watch={w} unread={unread?.[w.id]} />
           ))}
         </div>
       )}

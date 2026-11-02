@@ -19,16 +19,15 @@ SORT_MAP = {
 DEFAULT_SORT = "composite_score"
 
 
-def list_papers(db: Session, q=None, category=None, date_from=None, date_to=None,
-                sort="composite", has_summary=None, cursor=None, limit=20) -> dict:
-    limit = max(1, min(limit, 100))
-    sort = SORT_MAP.get(sort, DEFAULT_SORT)
-    stmt = select(Paper).options(selectinload(Paper.authors).selectinload(PaperAuthor.author), selectinload(Paper.primary_category))
-
+def _apply_filters(stmt, q=None, category=None, date_from=None, date_to=None,
+                   has_summary=None, ingested_after=None):
     if category:
-        stmt = stmt.join(PaperCategory, PaperCategory.paper_id == Paper.id)\
-                   .join(ResearchCategory, ResearchCategory.id == PaperCategory.category_id)\
-                   .where(ResearchCategory.slug == category)
+        # The explorer sends several picked categories comma-separated.
+        slugs = [c.strip() for c in category.split(",") if c.strip()]
+        in_category = select(PaperCategory.paper_id)\
+            .join(ResearchCategory, ResearchCategory.id == PaperCategory.category_id)\
+            .where(ResearchCategory.slug.in_(slugs))
+        stmt = stmt.where(Paper.id.in_(in_category))
     if q:
         like = f"%{q}%"
         stmt = stmt.where(Paper.title.ilike(like) | Paper.abstract.ilike(like))
@@ -36,10 +35,26 @@ def list_papers(db: Session, q=None, category=None, date_from=None, date_to=None
         stmt = stmt.where(Paper.published_at >= date_from)
     if date_to:
         stmt = stmt.where(Paper.published_at <= date_to)
+    if ingested_after:
+        stmt = stmt.where(Paper.ingested_at > ingested_after)
     if has_summary is True:
         stmt = stmt.where(Paper.ai_summary.isnot(None))
     elif has_summary is False:
         stmt = stmt.where(Paper.ai_summary.is_(None))
+    return stmt
+
+
+def count_papers(db: Session, **filters) -> int:
+    return db.scalar(_apply_filters(select(func.count(Paper.id)), **filters)) or 0
+
+
+def list_papers(db: Session, q=None, category=None, date_from=None, date_to=None,
+                sort="composite", has_summary=None, cursor=None, limit=20,
+                ingested_after=None) -> dict:
+    limit = max(1, min(limit, 100))
+    sort = SORT_MAP.get(sort, DEFAULT_SORT)
+    stmt = select(Paper).options(selectinload(Paper.authors).selectinload(PaperAuthor.author), selectinload(Paper.primary_category))
+    stmt = _apply_filters(stmt, q, category, date_from, date_to, has_summary, ingested_after)
 
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
 

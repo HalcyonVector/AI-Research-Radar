@@ -42,22 +42,36 @@ def delete(db: Session, client_key: str, watch_id: str) -> bool:
     return True
 
 
+FIRST_CHECK_WINDOW = timedelta(days=14)
+
+
+def _new_filters(w: TopicWatch) -> dict:
+    """Filters for papers the watch hasn't shown yet. After the first check this
+    goes by ingested_at, not published_at: arXiv papers often land a day after
+    their published date, so a published_at cutoff skipped them."""
+    filters = {"q": w.query, "category": w.category_slug}
+    if w.last_checked_at:
+        filters["ingested_after"] = w.last_checked_at
+    else:
+        filters["date_from"] = datetime.now(timezone.utc) - FIRST_CHECK_WINDOW
+    return filters
+
+
+def unread_counts(db: Session, client_key: str) -> dict:
+    """How many new papers each watch has, without marking them seen."""
+    rows = db.execute(select(TopicWatch).where(TopicWatch.client_key == client_key)).scalars().all()
+    counts = {str(w.id): paper_service.count_papers(db, **_new_filters(w)) for w in rows}
+    return {"data": counts, "total": sum(counts.values())}
+
+
 def digest(db: Session, client_key: str, watch_id: str) -> dict | None:
-    """Papers matching the watch's category/query published since it was last
+    """Papers matching the watch's category/query that arrived since it was last
     checked (or the last 14 days, on the first-ever check). Updates last_checked_at."""
     w = db.get(TopicWatch, watch_id)
     if not w or w.client_key != client_key:
         return None
 
-    date_from = w.last_checked_at or (datetime.now(timezone.utc) - timedelta(days=14))
-    result = paper_service.list_papers(
-        db,
-        q=w.query,
-        category=w.category_slug,
-        date_from=date_from,
-        sort="published_at",
-        limit=20,
-    )
+    result = paper_service.list_papers(db, sort="published_at", limit=20, **_new_filters(w))
 
     w.last_checked_at = datetime.now(timezone.utc)
     db.commit()

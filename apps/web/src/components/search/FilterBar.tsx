@@ -1,14 +1,53 @@
 "use client";
 
 import { useState } from "react";
-import { Search, SlidersHorizontal, X, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Bell, Check, Search, SlidersHorizontal, X, Sparkles } from "lucide-react";
 import { useFilterStore } from "@/stores/filters";
-import { CATEGORIES, SORT_OPTIONS } from "@/lib/constants";
+import { useCreateWatch } from "@/hooks/useWatches";
+import { CATEGORIES, SORT_OPTIONS, getCategory } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 interface FilterBarProps {
   resultCount?: number;
+}
+
+/** Saves the current search + categories as a topic watch. Dates, sort and
+ * the summary toggle aren't part of a watch, so they're not carried over. */
+function WatchSearchButton({ query, categories }: { query: string; categories: string[] }) {
+  const create = useCreateWatch();
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+  const categorySlug = categories.join(",");
+  const key = `${query}|${categorySlug}`;
+
+  if (!query && !categorySlug) return null;
+  if (savedKey === key) {
+    return (
+      <Link href="/watchlist" className="flex items-center gap-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+        <Check size={13} />
+        Watching
+      </Link>
+    );
+  }
+  const label = query || categories.map((s) => getCategory(s).name).join(" + ");
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={create.isPending || categorySlug.length > 50}
+      title="Get a count of new matching papers in the nav after each ingest"
+      onClick={() =>
+        create.mutate(
+          { label, query: query || undefined, category_slug: categorySlug || undefined },
+          { onSuccess: () => setSavedKey(key) }
+        )
+      }
+    >
+      <Bell size={13} />
+      Watch this search
+    </Button>
+  );
 }
 
 export function FilterBar({ resultCount }: FilterBarProps) {
@@ -154,6 +193,7 @@ export function FilterBar({ resultCount }: FilterBarProps) {
               {resultCount.toLocaleString("en-US")} results
             </span>
           )}
+          <WatchSearchButton query={query.trim()} categories={categories} />
           {(activeFilters > 0 || query) && (
             <Button variant="ghost" size="sm" onClick={reset}>
               <X size={13} />
