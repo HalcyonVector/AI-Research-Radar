@@ -11,6 +11,16 @@ from src.utils.scoring import growth_score, ewma
 # the ratio is meaningless noise (pins at the +/-100 clamp) rather than a real
 # signal - so those two scores are withheld (None) until enough history exists.
 MIN_HISTORY_DAYS = 14
+# Ingest volume swings week to week (arXiv is polled for the newest papers, so
+# the current week is always the best covered), and raw counts made every
+# category's growth pin at +100. Growth instead compares each category's
+# *share* of the week's papers: last week's count is rescaled by the ratio of
+# the two weeks' totals before taking the log ratio.
+
+
+def _total(db, start, end) -> int:
+    return db.scalar(select(func.count(Paper.id))
+                     .where(Paper.published_at >= start, Paper.published_at < end)) or 0
 
 
 def _count(db, cat_id, start, end) -> int:
@@ -34,11 +44,15 @@ def run():
         today = date.today()
         earliest = db.scalar(select(func.min(Paper.published_at)))
         has_history = earliest is not None and (today - earliest.date()) >= timedelta(days=MIN_HISTORY_DAYS)
+        # Two 7-day windows; "this week" runs through the end of today.
+        this_start, this_end = today - timedelta(days=6), today + timedelta(days=1)
+        last_start = today - timedelta(days=13)
+        scale = _total(db, this_start, this_end) / max(_total(db, last_start, this_start), 1)
         cats = db.execute(select(ResearchCategory)).scalars().all()
         for c in cats:
-            this_week = _count(db, c.id, today - timedelta(days=7), today + timedelta(days=1))
-            last_week = _count(db, c.id, today - timedelta(days=14), today - timedelta(days=7))
-            models_this_week = _model_count(db, c.id, today - timedelta(days=7), today + timedelta(days=1))
+            this_week = _count(db, c.id, this_start, this_end)
+            last_week = _count(db, c.id, last_start, this_start)
+            models_this_week = _model_count(db, c.id, this_start, this_end)
             activity = min(this_week / 5.0, 100.0)
             top = db.execute(select(Paper.id).join(PaperCategory, PaperCategory.paper_id == Paper.id)
                              .where(PaperCategory.category_id == c.id)
@@ -52,7 +66,7 @@ def run():
             snap.paper_count = this_week
             snap.model_count = models_this_week
             if has_history:
-                g = growth_score(this_week, last_week)
+                g = growth_score(this_week, last_week * scale)
                 hist = db.execute(select(TrendSnapshot.growth_score).where(
                     TrendSnapshot.category_id == c.id, TrendSnapshot.period == "weekly")
                     .order_by(TrendSnapshot.snapshot_date.desc()).limit(4)).scalars().all()

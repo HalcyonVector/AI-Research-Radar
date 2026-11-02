@@ -60,9 +60,11 @@ def influence_score(citation_velocity: float, impl_count: float, hf_model_count:
         + discussion * 15 + derivative_papers * 15 + cross_domain * 10, 100.0), 2)
 
 
-def growth_score(papers_this_week: int, papers_last_week: int) -> float:
-    """Spec 1.4.3: log(this/last) * 100, clamped to a readable range."""
-    last = max(papers_last_week, 1)
+def growth_score(papers_this_week: float, papers_last_week: float) -> float:
+    """Spec 1.4.3: log(this/last) * 100, clamped to a readable range. The +1
+    smoothing already handles an empty week, so 0 vs 0 is 0 (it used to floor
+    last week at 1 first, which scored two empty weeks as -69)."""
+    last = max(papers_last_week, 0)
     this = max(papers_this_week, 0)
     raw = math.log((this + 1) / (last + 1)) * 100
     return round(max(-100.0, min(raw, 100.0)), 2)
