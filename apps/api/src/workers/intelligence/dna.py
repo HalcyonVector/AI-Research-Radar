@@ -12,7 +12,7 @@ from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Paper
 from src.models.intelligence.paper_concept_composition import PaperConceptComposition
-from src.ai.llm import complete_json, model_name
+from src.ai.llm import RateLimited, complete_json, model_name
 from src.ai.prompts import DNA_PROMPT, vocabulary_block
 from src.config import settings
 from src.ai.vocabulary import VOCAB_SET
@@ -47,6 +47,11 @@ def compute_research_dna(self, limit: int = 20):
                            rationale=c.get("rationale"), model_used=model_name(settings.openai_model_heavy)))
                 db.commit()
                 done += 1
+            except RateLimited as e:
+                # Every later call would hit the same limit; the rest waits for the next run.
+                db.rollback()
+                print(f"::warning::dna: stopping after {done} papers: {e}", flush=True)
+                break
             except Exception:
                 db.rollback()
         return {"decomposed": done}

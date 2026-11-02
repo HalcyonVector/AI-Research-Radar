@@ -35,6 +35,10 @@ PAPER_SUMMARIES_PER_RUN = 15
 MODEL_SUMMARIES_PER_RUN = 25
 REPO_SUMMARIES_PER_RUN = 15
 SUMMARY_SPACING_S = 15   # ~4 calls/min x ~1.5K tokens, under the free ~8K TPM cap
+# The workflow kills a job at 25 min; stop starting new summaries well before
+# that so a slow provider ends the run cleanly instead of failing it.
+RUN_DEADLINE_S = 18 * 60
+_started = time.monotonic()
 
 
 def _embed_missing(db) -> int:
@@ -50,7 +54,7 @@ def _embed_missing(db) -> int:
         try:
             vecs = embed_texts([f"{p.title}\n\n{p.abstract}" for p in batch])
         except Exception as e:
-            logger.warning("backfill: embedding batch failed, stopping for this run: %s", e)
+            print(f"::warning::backfill: embedding batch failed, stopping for this run: {e}", flush=True)
             break
         for p, v in zip(batch, vecs):
             p.abstract_embedding = v
@@ -62,6 +66,10 @@ def _embed_missing(db) -> int:
 def _summarize(label, generate, ids) -> int:
     done = failed_in_a_row = 0
     for i, rid in enumerate(ids):
+        if time.monotonic() - _started > RUN_DEADLINE_S:
+            print(f"::warning::backfill: out of time, leaving the remaining {label} summaries "
+                  f"for the next run ({done} done)", flush=True)
+            break
         if i:
             time.sleep(SUMMARY_SPACING_S)
         if generate.run(str(rid)).get("ok"):
@@ -70,7 +78,10 @@ def _summarize(label, generate, ids) -> int:
         else:
             failed_in_a_row += 1
             if failed_in_a_row >= 2:  # quota/model/key problem, not a bad row: don't burn the run on it
-                logger.warning("backfill: 2 %s summaries failed in a row, stopping them for this run", label)
+                # print, not logger: these must show in the Actions log, where a
+                # rate-limited run used to look like 25 silent minutes.
+                print(f"::warning::backfill: 2 {label} summaries failed in a row, "
+                      f"stopping them for this run ({done} done)", flush=True)
                 break
     return done
 
@@ -107,6 +118,8 @@ def _summarize_repos(db) -> int:
 
 @celery_app.task(name="workers.ai.backfill.run")
 def run():
+    global _started
+    _started = time.monotonic()
     db = session_scope()
     try:
         out = {"embedded": _embed_missing(db),

@@ -17,6 +17,7 @@ instead of taking the whole instance (and the API with it) down.
 import gc
 import importlib
 import json
+import logging
 import os
 import sys
 import threading
@@ -47,6 +48,9 @@ def _watchdog() -> None:
 def main() -> int:
     name = sys.argv[1]
     kwargs = json.loads(sys.argv[2]) if len(sys.argv) > 2 else {}
+    # Without this, the jobs' logger.warning() calls (failed summaries, skipped
+    # rows) went nowhere, so a struggling job showed nothing in the CI log.
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s", stream=sys.stdout)
     threading.Thread(target=_watchdog, daemon=True).start()
 
     # Import ONLY this task's own module (celery task names mirror the module path:

@@ -25,18 +25,39 @@ class LLMError(Exception):
     pass
 
 
+class RateLimited(LLMError):
+    """The provider wants us to back off longer than a batch job should wait.
+    Callers stop their batch and leave the rest for the next run."""
+
+
+MAX_WAIT_S = 60.0        # longest single back-off we'll sit through
+RETRY_BUDGET_S = 120.0   # total back-off per call before giving up
+
+
 def _post_with_retry(url, *, headers=None, json=None, timeout=120, max_retries=6):
-    """POST that backs off on 429/5xx, honoring the Retry-After header when present."""
+    """POST that backs off on 429/5xx, honoring the Retry-After header when present.
+
+    Gives up with RateLimited once the provider asks for more than MAX_WAIT_S or
+    the call has waited RETRY_BUDGET_S in total. Previously every call slept up
+    to 6 x 60s; with Groq's daily quota nearly spent, each summary took ~5 min,
+    so jobs crawled into their 25-minute timeout instead of stopping."""
     delay = 2.0
+    waited = 0.0
     for attempt in range(max_retries + 1):
         r = requests.post(url, headers=headers, json=json, timeout=timeout)
         if r.status_code == 429 or r.status_code >= 500:
-            if attempt == max_retries:
-                r.raise_for_status()
             retry_after = r.headers.get("Retry-After")
-            wait = float(retry_after) if retry_after else delay
-            time.sleep(min(wait, 60.0))
-            delay = min(delay * 2, 60.0)
+            try:
+                wait = float(retry_after) if retry_after else delay
+            except ValueError:
+                wait = delay
+            if attempt == max_retries or wait > MAX_WAIT_S or waited + wait > RETRY_BUDGET_S:
+                if r.status_code == 429:
+                    raise RateLimited(f"rate limited (retry-after {retry_after or '?'}s, waited {waited:.0f}s)")
+                r.raise_for_status()
+            time.sleep(wait)
+            waited += wait
+            delay = min(delay * 2, MAX_WAIT_S)
             continue
         r.raise_for_status()
         return r
