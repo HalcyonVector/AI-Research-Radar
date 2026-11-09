@@ -25,7 +25,7 @@ export function CategoryBadge({ slug, name, href, className }: CategoryBadgeProp
       )}
     >
       <span className="h-1.5 w-1.5 shrink-0" style={{ backgroundColor: cat.color }} />
-      {label}
+      <span className="min-w-0 truncate">{label}</span>
     </span>
   );
 

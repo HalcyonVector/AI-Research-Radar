@@ -12,8 +12,9 @@ sleeps between pages accordingly.
 """
 import logging
 import time
+from datetime import datetime, timedelta, timezone
 import requests
-from sqlalchemy import select
+from sqlalchemy import func, select
 from src.celery_app import celery_app
 from src.database import session_scope
 from src.models import Repository, Paper, KnowledgeGraphEdge
@@ -40,6 +41,16 @@ CRAWL_QUERIES = QUERIES + [
     "topic:generative-ai stars:>50",
     "topic:reinforcement-learning stars:>50",
     "topic:computer-vision topic:deep-learning stars:>50",
+]
+
+# Recently created repos, best-starred first. QUERIES sort by all-time stars,
+# so every run got the same ~120 repos back and the corpus stopped growing
+# ("0 new repos" on the dashboard). These surface what's new each week.
+FRESH_WINDOW = timedelta(days=30)
+FRESH_QUERIES = [
+    "topic:llm created:>{since} stars:>20",
+    "topic:machine-learning created:>{since} stars:>50",
+    "arxiv in:readme language:python created:>{since} stars:>10",
 ]
 
 PER_PAGE = 40
@@ -121,7 +132,9 @@ def run(self):
     upserted = 0
     db = session_scope()
     try:
-        for qi, query in enumerate(QUERIES):
+        before = db.scalar(select(func.count(Repository.id))) or 0
+        since = (datetime.now(timezone.utc) - FRESH_WINDOW).date().isoformat()
+        for qi, query in enumerate(QUERIES + [q.format(since=since) for q in FRESH_QUERIES]):
             if qi:
                 _rate_limit_sleep()
             repos = None
@@ -138,7 +151,8 @@ def run(self):
             for rd in repos:
                 if upsert_repo(db, rd):
                     upserted += 1
-        return {"upserted": upserted}
+        new = (db.scalar(select(func.count(Repository.id))) or 0) - before
+        return {"upserted": upserted, "new": new}
     finally:
         db.close()
 

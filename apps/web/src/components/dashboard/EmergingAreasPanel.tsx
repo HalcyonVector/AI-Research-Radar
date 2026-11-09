@@ -57,17 +57,26 @@ export function EmergingAreasPanel({ trends, loading }: EmergingAreasPanelProps)
                 href={`/trends/${cat?.slug}`}
                 className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0 transition-opacity hover:opacity-80"
               >
-                <div className="min-w-0 shrink-0">
-                  <CategoryBadge slug={cat?.slug} name={cat?.name} color={cat?.color} />
+                {/* The label takes the leftover width and truncates, so long
+                    names like "Evaluation Frameworks" can't push the numbers
+                    out of the card in the narrow dashboard column. */}
+                <div className="min-w-0 flex-1" title={cat?.name}>
+                  <CategoryBadge
+                    slug={cat?.slug}
+                    name={cat?.name}
+                    color={cat?.color}
+                    className="max-w-full"
+                  />
                 </div>
-                <div className="flex-1" />
-                <Sparkline
-                  data={trend.sparkline ?? []}
-                  width={72}
-                  height={24}
-                  color={cat?.color}
-                  fill
-                />
+                <div className="hidden shrink-0 sm:block">
+                  <Sparkline
+                    data={trend.sparkline ?? []}
+                    width={56}
+                    height={24}
+                    color={cat?.color}
+                    fill
+                  />
+                </div>
                 <div className="flex w-16 shrink-0 flex-col items-end">
                   <GrowthBadge value={trend.scores?.growth ?? null} />
                   <span className="text-[10px] tabular-nums text-[var(--text-tertiary)]">
