@@ -7,8 +7,11 @@
  * on the Python side. Any failure (no credentials, miss, timeout) returns
  * null and the caller falls back to Render.
  */
-const URL_ = process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+// Pasted dashboard values often carry a trailing newline or quotes, which make
+// fetch() throw (an invalid header value or URL), so clean them up first.
+const clean = (v: string | undefined) => v?.trim().replace(/^["']|["']$/g, "") || undefined;
+const URL_ = clean(process.env.UPSTASH_REDIS_REST_URL);
+const TOKEN = clean(process.env.UPSTASH_REDIS_REST_TOKEN);
 const TIMEOUT_MS = 2500;
 
 export function snapshotKey(path: string, params: Record<string, string>): string {
@@ -37,6 +40,8 @@ export async function readSnapshot(
 ): Promise<{ data: unknown | null; status: string }> {
   if (!SNAPSHOT_PATHS.has(path)) return { data: null, status: "not-snapshotted" };
   if (!URL_ || !TOKEN) return { data: null, status: "off" };
+  // The REST endpoint, not the rediss:// connection string.
+  if (!URL_.startsWith("https://")) return { data: null, status: "bad-url" };
   try {
     const res = await fetch(URL_.replace(/\/$/, ""), {
       method: "POST",
@@ -49,6 +54,7 @@ export async function readSnapshot(
     const { result } = (await res.json()) as { result: string | null };
     return result ? { data: JSON.parse(result), status: "hit" } : { data: null, status: "miss" };
   } catch (e) {
-    return { data: null, status: e instanceof Error && e.name === "TimeoutError" ? "timeout" : "error" };
+    // The error's name only (no message), so nothing about the credentials leaks.
+    return { data: null, status: `error-${e instanceof Error ? e.name : "unknown"}` };
   }
 }
