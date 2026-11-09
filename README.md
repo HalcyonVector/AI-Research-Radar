@@ -6,6 +6,8 @@ A continuously-updated intelligence layer over the global AI research ecosystem,
 
 > **What it's for:** follow what is happening in AI research across papers, models and repositories, and see which areas are heating up, in one place.
 
+![Dashboard: trending papers, emerging areas, this week in numbers and the weekly briefing](docs/screenshots/overview.png)
+
 ---
 
 ## Features
