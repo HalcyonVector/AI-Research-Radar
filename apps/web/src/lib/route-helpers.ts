@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { safeApiFetch } from "./api";
+import { readSnapshot } from "./snapshots";
 
 /** Data only changes when the 6-hourly ingest runs, so successful public GETs
  * are cached on Vercel's CDN. stale-while-revalidate means a visitor gets the
@@ -33,6 +34,20 @@ export async function proxyGet(
     }
   }
 
+  const cacheable = (opts.cdnCache ?? true) && !opts.headers?.["X-Client-Id"];
+  const cdnHeaders = {
+    "Cache-Control": `public, max-age=0, s-maxage=${CDN_S_MAXAGE}, stale-while-revalidate=${CDN_STALE_WHILE_REVALIDATE}`,
+  };
+
+  // Public pages first try the snapshot the last ingest run published, which
+  // doesn't need the (often asleep) Render instance.
+  if (cacheable) {
+    const snap = await readSnapshot(upstreamPath, searchParams);
+    if (snap !== null) {
+      return NextResponse.json(snap, { headers: { ...cdnHeaders, "X-Data-Source": "snapshot" } });
+    }
+  }
+
   const result = await safeApiFetch<unknown>(upstreamPath, {
     searchParams,
     timeoutMs: opts.timeoutMs,
@@ -41,11 +56,8 @@ export async function proxyGet(
   if ("error" in result) {
     return NextResponse.json(result.error, { status: result.status });
   }
-  const cacheable = (opts.cdnCache ?? true) && !opts.headers?.["X-Client-Id"];
   return NextResponse.json(result.data, {
-    headers: cacheable
-      ? { "Cache-Control": `public, max-age=0, s-maxage=${CDN_S_MAXAGE}, stale-while-revalidate=${CDN_STALE_WHILE_REVALIDATE}` }
-      : { "Cache-Control": "private, no-store" },
+    headers: cacheable ? cdnHeaders : { "Cache-Control": "private, no-store" },
   });
 }
 

@@ -56,7 +56,9 @@ jobs:
   #   OPENAI_API_KEY  the Groq key Render uses (summaries)
   #   GEMINI_API_KEY  free key from aistudio.google.com (embeddings only;
   #                   Groq has no embeddings API)
-  # Optional: REDIS_URL, HF_API_TOKEN, SEMANTIC_SCHOLAR_API_KEY (free; avoids
+  # Optional: UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (page snapshots
+  # the site reads without waking Render; same values as on Vercel),
+  # REDIS_URL, HF_API_TOKEN, SEMANTIC_SCHOLAR_API_KEY (free; avoids
   # the shared pool's 429s), GH_API_TOKEN (falls back to this
   # workflow's own token), OPENAI_BASE_URL (defaults to Groq).
   # Optional repo variables: AI_MODE (default openai), GEMINI_MODEL,
@@ -90,6 +92,8 @@ jobs:
       EMBEDDING_DIM: "384"
       HF_API_TOKEN: ${{ secrets.HF_API_TOKEN }}
       SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN || github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -138,6 +142,8 @@ jobs:
           run workers.scoring.model_scores.run
           run workers.graph.edge_builder.rebuild
           run workers.intelligence.orchestrate.run_daily
+          # Last, so the snapshots the site serves reflect this run.
+          run workers.snapshots.publish 600
           if [ -n "${failed}" ]; then echo "Failed:${failed}"; exit 1; fi
 
   weekly-intelligence-and-briefing:
@@ -169,6 +175,8 @@ jobs:
       OPENAI_MODEL_LIGHT: ${{ vars.OPENAI_MODEL_LIGHT || 'openai/gpt-oss-20b' }}
       EMBEDDING_PROVIDER: gemini
       EMBEDDING_DIM: "384"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -209,6 +217,8 @@ jobs:
           run workers.intelligence.frontier.train_and_score_frontier_predictor
           # Last, so it summarises this week's fresh Layer-3 output.
           run workers.ai.briefing.generate
+          # Republish so the new briefing shows up without waking Render.
+          run workers.snapshots.publish 600
           if [ -n "${failed}" ]; then echo "Failed:${failed}"; exit 1; fi
 
   # Manual-only: one-shot deep-pull crawl (see POST /internal/ingest/crawl/{job}'s

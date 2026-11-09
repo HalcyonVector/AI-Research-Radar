@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     # Core infra
     database_url: str = "postgresql+psycopg://radar:radar@localhost:5432/radar_dev"
     redis_url: str = "redis://localhost:6379/0"
+    # Upstash REST endpoint for the published page snapshots the web app reads
+    # without waking Render (src.workers.snapshots). Blank = snapshots off.
+    upstash_redis_rest_url: str = ""
+    upstash_redis_rest_token: str = ""
     secret_key: str = "dev-secret-change-me"
     environment: str = "development"
 
