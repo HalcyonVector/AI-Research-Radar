@@ -1,40 +1,42 @@
-# AI Research Radar — AI Research Intelligence Platform
+# AI Research Radar: AI Research Intelligence Platform
 
-A continuously-updated intelligence layer over the global AI research ecosystem — tracking arXiv papers, Hugging Face models, and GitHub repos at scale. It ingests, scores, and AI-summarizes research, then reasons over its own knowledge graph to answer not just *what* is happening, but *why it's happening, where it's going, and what it means*. Think "Bloomberg Terminal for AI research." Runs on free-tier infrastructure end to end — locally with Ollama, or in the cloud with Groq/Cerebras/OpenRouter.
+A continuously-updated intelligence layer over the global AI research ecosystem, tracking arXiv papers, Hugging Face models, and GitHub repos at scale. It ingests, scores, and AI-summarizes research, then reasons over its own knowledge graph to answer not just *what* is happening, but *why it's happening, where it's going, and what it means*. Think "Bloomberg Terminal for AI research." Runs on free-tier infrastructure end to end, locally with Ollama, or in the cloud with Groq/Cerebras/OpenRouter.
 
 **Live:** [ai-research-radar.vercel.app](https://ai-research-radar.vercel.app) (frontend) · [ai-research-radar-api.onrender.com](https://ai-research-radar-api.onrender.com/docs) (API + Swagger)
+
+> **What it's for:** follow what is happening in AI research across papers, models and repositories, and see which areas are heating up, in one place.
 
 ---
 
 ## Features
 
 ### Core Features
-- **Research Dashboard** — A bento-grid homepage answering "What happened in AI today?": trending papers, emerging areas, breakout models, weekly briefing, activity heatmap, and sleeping-giant papers
-- **Paper Intelligence** — Every paper gets a page with an AI-generated summary (contribution, innovation, problem solved, applications, limitations), impact/momentum/innovation score rings, metrics, related papers, and Research DNA
-- **Trend Radar** — 15 research categories scored weekly for Growth, Momentum, Activity, and Adoption, with an interactive SVG radar and per-category timelines
-- **Model Intelligence** — Hugging Face models tracked for download acceleration, likes, linked papers, and growth score
-- **Hybrid Search** — Semantic (pgvector) + keyword (full-text) search with a `Cmd+K` command palette
-- **Knowledge Graph** — D3 force-directed graph over papers, authors, orgs, models, and repos with `cites / authored_by / implements / based_on` edges
-- **Weekly AI Briefing** — Auto-generated every Monday: this week in numbers, big stories, emerging signals, papers worth your time, and what to watch
-- **Watchlist** — Bookmark papers/models and save standing topic watches (query or category) that surface a digest of what's new since you last checked. Scoped to an anonymous per-browser id (no login system) rather than shared globally
+- **Research Dashboard**: A bento-grid homepage answering "What happened in AI today?": trending papers, emerging areas, breakout models, weekly briefing, activity heatmap, and sleeping-giant papers
+- **Paper Intelligence**: Every paper gets a page with an AI-generated summary (contribution, innovation, problem solved, applications, limitations), impact/momentum/innovation score rings, metrics, related papers, and Research DNA
+- **Trend Radar**: 15 research categories scored weekly for Growth, Momentum, Activity, and Adoption, with an interactive SVG radar and per-category timelines
+- **Model Intelligence**: Hugging Face models tracked for download acceleration, likes, linked papers, and growth score
+- **Hybrid Search**: Semantic (pgvector) + keyword (full-text) search with a `Cmd+K` command palette
+- **Knowledge Graph**: D3 force-directed graph over papers, authors, orgs, models, and repos with `cites / authored_by / implements / based_on` edges
+- **Weekly AI Briefing**: Auto-generated every Monday: this week in numbers, big stories, emerging signals, papers worth your time, and what to watch
+- **Watchlist**: Bookmark papers/models and save standing topic watches (query or category) that surface a digest of what's new since you last checked. Scoped to an anonymous per-browser id (no login system) rather than shared globally
 
-### Research Intelligence Engine (Layer 3 — the flagship)
-A reasoning layer over the knowledge graph. Every capability is computed from data already ingested — no new sources:
-- **Sleeping Giants** — Not-yet-famous papers showing every early signal of eventual importance (growth-rate scoring, citation count excluded on purpose)
-- **Talent Flow** — Detects researchers moving between organizations, inferred from per-paper author affiliations over time (OpenAlex-enriched)
-- **Lab Scorecard** — Ranks organizations by research output, paper impact, and recent momentum, derived from the same affiliation data
-- **Idea Propagation** — Trace a concept as it moves lab → lab → open source → commercial adoption
-- **Research Genealogy** — A pruned "family tree" of a field via concept-shift detection
-- **Cross-Pollination** — Detect ideas leaking across research areas via shared carrier concepts
-- **Research DNA** — A weighted concept fingerprint per paper (e.g. 65% Retrieval · 20% Multi-agent · 10% RL) with "genetic distance" comparison
-- **Evolution Timeline** — The adoption story of an idea: introduced → improved → simplified → open-sourced → industry adoption
-- **Hidden Collaborations** — Institution-level collaboration clusters via community detection
-- **Research Influence Score** — A cross-source footprint metric distinct from raw citations
-- **Frontier Predictor** — A scikit-learn model estimating which category is about to accelerate (probabilistic, with top contributing signals)
-- **Research Storytelling** — AI-written narratives of a period's shift, with every claim traceable to a real entity
+### Research Intelligence Engine (Layer 3, the flagship)
+A reasoning layer over the knowledge graph. Every capability is computed from data already ingested, no new sources:
+- **Sleeping Giants**: Not-yet-famous papers showing every early signal of eventual importance (growth-rate scoring, citation count excluded on purpose)
+- **Talent Flow**: Detects researchers moving between organizations, inferred from per-paper author affiliations over time (OpenAlex-enriched)
+- **Lab Scorecard**: Ranks organizations by research output, paper impact, and recent momentum, derived from the same affiliation data
+- **Idea Propagation**: Trace a concept as it moves lab → lab → open source → commercial adoption
+- **Research Genealogy**: A pruned "family tree" of a field via concept-shift detection
+- **Cross-Pollination**: Detect ideas leaking across research areas via shared carrier concepts
+- **Research DNA**: A weighted concept fingerprint per paper (e.g. 65% Retrieval · 20% Multi-agent · 10% RL) with "genetic distance" comparison
+- **Evolution Timeline**: The adoption story of an idea: introduced → improved → simplified → open-sourced → industry adoption
+- **Hidden Collaborations**: Institution-level collaboration clusters via community detection
+- **Research Influence Score**: A cross-source footprint metric distinct from raw citations
+- **Frontier Predictor**: A scikit-learn model estimating which category is about to accelerate (probabilistic, with top contributing signals)
+- **Research Storytelling**: AI-written narratives of a period's shift, with every claim traceable to a real entity
 
 ### Data & AI Coverage
-- **Sources:** arXiv (papers), Hugging Face (models), GitHub (implementations) — all free APIs
+- **Sources:** arXiv (papers), Hugging Face (models), GitHub (implementations), all public APIs
 - **AI:** Summaries, Research DNA, and narratives via Groq (primary cloud provider, free/fast) with Cerebras or OpenRouter as automatic failover, or Ollama for fully local/offline use; embeddings via local `sentence-transformers`
 - **Scoring:** Impact, Momentum, Innovation, Composite (Layer 2) + Emerging Breakthrough, Influence, Frontier Probability (Layer 3)
 
@@ -50,20 +52,20 @@ A reasoning layer over the knowledge graph. Every capability is computed from da
 | **Task Queue** | Celery + Redis | Tasks across ingestion / AI / scoring / graph / intelligence queues |
 | **Database** | PostgreSQL 16 + pgvector | IVFFlat vector index, GIN full-text, materialized views |
 | **AI (LLM)** | Groq / Cerebras / OpenRouter *(cloud, OpenAI-compatible)* or Ollama *(local)* | Provider-agnostic via `AI_MODE` + per-lane routing |
-| **Embeddings** | sentence-transformers `all-MiniLM-L6-v2` | 384-dim, runs locally & free |
+| **Embeddings** | sentence-transformers `all-MiniLM-L6-v2` | 384-dim, runs locally |
 | **ML** | scikit-learn, NetworkX, python-louvain | Frontier predictor + community detection |
 | **Cache/Broker** | Redis (Upstash in production) | Dashboard/search/graph caching, rate limiting, dedup |
-| **Infra** | Docker Compose (local) · Vercel · Render · Supabase · Upstash | All with free tiers |
+| **Infra** | Docker Compose (local) · Vercel · Render · Supabase · Upstash | Hosted on Vercel, Render, Supabase and Upstash |
 
 ---
 
 ## Prerequisites
 
-- **Node.js 20+** — [nodejs.org](https://nodejs.org) (frontend)
-- **Python 3.12+** — [python.org](https://python.org) (backend & workers)
-- **Docker Desktop** — [docker.com](https://docker.com) (Postgres, Redis, one-command local stack)
-- **Ollama** *(optional, for local AI)* — [ollama.com](https://ollama.com), then `ollama pull qwen2.5:7b`
-- **Free API keys** *(all optional)* — Hugging Face token (higher rate limits), GitHub token (higher rate limits), a Groq key for cloud AI ([console.groq.com](https://console.groq.com))
+- **Node.js 20+**: [nodejs.org](https://nodejs.org) (frontend)
+- **Python 3.12+**: [python.org](https://python.org) (backend & workers)
+- **Docker Desktop**: [docker.com](https://docker.com) (Postgres, Redis, one-command local stack)
+- **Ollama** *(optional, for local AI)*, [ollama.com](https://ollama.com), then `ollama pull qwen2.5:7b`
+- **Free API keys** *(all optional)*, Hugging Face token (higher rate limits), GitHub token (higher rate limits), a Groq key for cloud AI ([console.groq.com](https://console.groq.com))
 
 ---
 
@@ -96,7 +98,7 @@ Watch progress in Flower. Allow 15–30 min for workers to summarize and score.
 
 ### Frontend only (pointing at an already-running backend)
 
-The frontend always calls the real API — there is no offline/mock mode.
+The frontend always calls the real API, there is no offline/mock mode.
 
 ```bash
 cd apps/web
@@ -227,7 +229,7 @@ Papers are mapped to a category primarily by arXiv tag overlap (`category_for_ar
 - **Emerging Breakthrough** (Sleeping Giants) = growth-rate blend, citation count deliberately excluded
 - **Frontier Probability** = trained logistic regression over lagged trend signals once enough weekly history exists, with a bounded heuristic fallback before that
 - **Lab Scorecard** = weighted blend of normalized paper output, average paper impact, and 30-day publication momentum per organization
-- **Growth/Momentum warm-up** — a category's week-over-week Growth and Momentum are withheld (shown as "new," not a computed value) until its corpus spans at least 14 days, since a shorter history makes the week-over-week ratio meaningless rather than genuinely flat or spiking
+- **Growth/Momentum warm-up**: a category's week-over-week Growth and Momentum are withheld (shown as "new," not a computed value) until its corpus spans at least 14 days, since a shorter history makes the week-over-week ratio meaningless rather than genuinely flat or spiking
 
 ### Pipeline
 ```
@@ -246,28 +248,28 @@ FastAPI  /api/v1/*  →  Next.js dashboard
 
 ## Deployment
 
-Full step-by-step guide in **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**. Two paths, both free:
+Full step-by-step guide in **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**. Two paths:
 
 ### Local (Docker)
 ```bash
 cd infra/docker && docker compose up -d      # full stack incl. Ollama-backed AI
 ```
 
-### Free Cloud (Auto-Deploy)
-| Layer | Host | Free tier |
+### Cloud (Auto-Deploy)
+| Layer | Host | Notes |
 |-------|------|-----------|
-| Frontend | **Vercel** | Yes (Root Directory = `apps/web`) |
-| API | **Render** | Free web service (sleeps after ~15 min idle), 512MB RAM ceiling |
-| Database | **Supabase** | Postgres + pgvector — run `create extension vector`, keep `EMBEDDING_DIM=384` |
-| Redis | **Upstash** | Free tier (broker + cache), TLS via `rediss://` |
-| AI | **Groq** *(primary)*, Cerebras/OpenRouter *(failover)* | Free tiers, `AI_MODE=openai` |
+| Frontend | **Vercel** | Root Directory = `apps/web` |
+| API | **Render** | Web service (sleeps after ~15 min idle), 512MB RAM ceiling |
+| Database | **Supabase** | Postgres + pgvector, run `create extension vector`, keep `EMBEDDING_DIM=384` |
+| Redis | **Upstash** | Broker + cache, TLS via `rediss://` |
+| AI | **Groq** *(primary)*, Cerebras/OpenRouter *(failover)* | `AI_MODE=openai` |
 
-On Render's free tier there's no always-on Celery worker/beat (`CELERY_EAGER=true` runs tasks in-process instead), so a GitHub Actions cron (`ingest-cron.yml`) drives ingestion, enrichment, and the weekly Layer-3/briefing jobs on a schedule instead of a paid worker.
+On the Render plan used here there's no always-on Celery worker/beat (`CELERY_EAGER=true` runs tasks in-process instead), so a GitHub Actions cron (`ingest-cron.yml`) drives ingestion, enrichment, and the weekly Layer-3/briefing jobs on a schedule instead of a paid worker.
 
-Separately, the free web service sleeps after ~15 min idle regardless of the ingestion cron (which only runs every 6h) — an external pinger (e.g. [cron-job.org](https://cron-job.org), free) hits `GET /health` every 10 min to keep it warm for real user traffic. No repo config needed; it's just a scheduled HTTP GET pointed at the deployed API.
+Separately, the free web service sleeps after ~15 min idle regardless of the ingestion cron (which only runs every 6h), an external pinger (e.g. [cron-job.org](https://cron-job.org)) hits `GET /health` every 10 min to keep it warm for real user traffic. No repo config needed; it's just a scheduled HTTP GET pointed at the deployed API.
 
-### GitHub Actions (free "scheduler")
-Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a schedule and hits the internal ingest/enrich/recompute endpoints — a zero-cost replacement for a cron worker. Requires two repo secrets: `API_BASE_URL` and `API_SECRET_KEY`.
+### GitHub Actions (scheduler)
+Since there is no always-on Celery worker, `ingest-cron.yml` wakes the API on a schedule and hits the internal ingest/enrich/recompute endpoints, a replacement for a cron worker. Requires two repo secrets: `API_BASE_URL` and `API_SECRET_KEY`.
 
 ---
 
@@ -280,8 +282,8 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 | **Seed categories** | `python infra/scripts/seed_categories.py` | The 15 research categories |
 | **Expand model crawl** | `python infra/scripts/expand_models.py [target]` | One-off deep Hugging Face model crawl |
 | **Expand repo crawl** | `python infra/scripts/expand_repos.py [target]` | One-off deep GitHub repo crawl |
-| **Backfill paper categories (local)** | `python infra/scripts/backfill_paper_categories.py` (needs the Docker Compose `/repo` mount — not present in the deployed image) | Recompute `primary_category` for existing papers with the current `category_for_arxiv()` logic. Re-fetches each paper's raw arXiv tags (they aren't stored on the row) in batches, respecting arXiv's rate limit. Safe to re-run — idempotent, only touches papers whose category actually changes |
-| **Backfill paper categories (deployed)** | `curl -X POST .../api/v1/internal/categories/backfill -H "Authorization: Bearer <KEY>"` | Same recompute, as a Celery task triggerable without Shell access — the only way to run it against Render's free tier |
+| **Backfill paper categories (local)** | `python infra/scripts/backfill_paper_categories.py` (needs the Docker Compose `/repo` mount, not present in the deployed image) | Recompute `primary_category` for existing papers with the current `category_for_arxiv()` logic. Re-fetches each paper's raw arXiv tags (they aren't stored on the row) in batches, respecting arXiv's rate limit. Safe to re-run, idempotent, only touches papers whose category actually changes |
+| **Backfill paper categories (deployed)** | `curl -X POST .../api/v1/internal/categories/backfill -H "Authorization: Bearer <KEY>"` | Same recompute, as a Celery task triggerable without Shell access, the only way to run it against Render's free tier |
 | **Run API** | `uvicorn src.main:app --reload --port 8000` | FastAPI + Swagger at `/docs` |
 | **Run a worker** | `celery -A src.celery_app worker -Q <queues> -l info` | Ingestion/AI/scoring/intelligence |
 | **Trigger ingestion** | `curl -X POST .../api/v1/internal/ingest/trigger -H "Authorization: Bearer <KEY>"` | Fetch real papers/models/repos |
@@ -299,25 +301,25 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 **Solution:** Activate the venv and install: `pip install -r apps/api/requirements.txt`. For local embeddings also ensure `sentence-transformers` is installed.
 
 ### Issue: AI summaries never generate (local mode)
-**Solution:** Confirm Ollama is running (`curl http://localhost:11434/api/tags`) and the model is pulled (`ollama pull qwen2.5:7b`). CPU inference is slow (~5–15s/paper) — the queue clears over time.
+**Solution:** Confirm Ollama is running (`curl http://localhost:11434/api/tags`) and the model is pulled (`ollama pull qwen2.5:7b`). CPU inference is slow (~5–15s/paper), the queue clears over time.
 
 ### Issue: AI summaries fail (cloud mode)
 **Solution:** Set `AI_MODE=openai` and a valid `OPENAI_API_KEY` (Groq) in `.env`. Free tiers are rate-limited; configure `OPENAI_BASE_URL_2`/`OPENAI_API_KEY_2` as an automatic failover provider (Cerebras or OpenRouter) so a daily cap on one provider doesn't stall summaries.
 
 ### Issue: arXiv ingestion returns 0 papers
-**Solution:** Normal occasionally — arXiv enforces a 3s delay and may be briefly down. Check worker logs for errors and retry in ~30 min.
+**Solution:** Normal occasionally, arXiv enforces a 3s delay and may be briefly down. Check worker logs for errors and retry in ~30 min.
 
 ### Issue: Frontend builds but pages are empty or show errors
-**Solution:** The frontend has no mock/demo fallback — it only ever shows real data. If pages are empty or erroring, the API is unreachable. Set `API_BASE_URL` in `apps/web/.env.local` to your running backend and confirm `curl $API_BASE_URL/health` returns 200.
+**Solution:** The frontend has no mock/demo fallback, it only ever shows real data. If pages are empty or erroring, the API is unreachable. Set `API_BASE_URL` in `apps/web/.env.local` to your running backend and confirm `curl $API_BASE_URL/health` returns 200.
 
 ### Issue: Render service is slow on first load
-**Solution:** Free web services sleep after ~15 min idle and cold-start (~30–60s) — `entrypoint.sh` re-runs the Postgres wait, migrations, and seed step on every boot, so the first request after a sleep pays that full chain. `ingest-cron.yml` only pings every 6h, which isn't frequent enough to stop the sleep between user visits; a dedicated external pinger (cron-job.org or UptimeRobot, free) hitting `GET /health` every ~10 min keeps the service warm for actual traffic.
+**Solution:** Free web services sleep after ~15 min idle and cold-start (~30–60s), `entrypoint.sh` re-runs the Postgres wait, migrations, and seed step on every boot, so the first request after a sleep pays that full chain. `ingest-cron.yml` only pings every 6h, which isn't frequent enough to stop the sleep between user visits; a dedicated external pinger (cron-job.org or UptimeRobot, free) hitting `GET /health` every ~10 min keeps the service warm for actual traffic.
 
 ### Issue: Render deploy fails with "Out of memory (used over 512Mi)"
-**Solution:** The free tier's 512MB ceiling is tight for a stack that includes `sentence-transformers`/torch. Don't eagerly load ML models at FastAPI startup — keep them lazy-loaded on first use (the existing pattern in `src/ai/embeddings.py`), and give routes that may cold-load them a longer client-side timeout instead.
+**Solution:** The free tier's 512MB ceiling is tight for a stack that includes `sentence-transformers`/torch. Don't eagerly load ML models at FastAPI startup, keep them lazy-loaded on first use (the existing pattern in `src/ai/embeddings.py`), and give routes that may cold-load them a longer client-side timeout instead.
 
 ### Issue: Celery/Redis fails with "A rediss:// URL must have parameter ssl_cert_reqs"
-**Solution:** Hosted Redis (e.g. Upstash) requires TLS. Celery's Redis transport doesn't reliably pick up `ssl_cert_reqs` from the URL query string — set it explicitly via `broker_use_ssl` / `redis_backend_use_ssl` in `celery_app.py` (already configured) whenever `REDIS_URL` starts with `rediss://`.
+**Solution:** Hosted Redis (e.g. Upstash) requires TLS. Celery's Redis transport doesn't reliably pick up `ssl_cert_reqs` from the URL query string, set it explicitly via `broker_use_ssl` / `redis_backend_use_ssl` in `celery_app.py` (already configured) whenever `REDIS_URL` starts with `rediss://`.
 
 ### Issue: Celery workers won't connect
 **Solution:** Check `REDIS_URL` in `.env` and that Redis is up (`docker compose ps`).
@@ -327,7 +329,7 @@ Since always-on Celery workers aren't free, `ingest-cron.yml` wakes the API on a
 ## Future Enhancements
 - [ ] Semantic Scholar citation backfill for real citation velocities
 - [ ] Reddit / Hacker News social-signal ingestion
-- [ ] Papers With Code benchmark + leaderboard tracking (real data — the earlier placeholder benchmark widget was removed rather than shipped with fake data)
+- [ ] Papers With Code benchmark + leaderboard tracking (real data, the earlier placeholder benchmark widget was removed rather than shipped with fake data)
 - [ ] User accounts, saved searches, and email digests
 - [ ] Real-time WebSocket updates for the dashboard
 - [ ] HNSW vector index migration at large scale
@@ -351,6 +353,6 @@ Found a bug or have a feature request? [Open an issue](https://github.com/your-u
 ---
 
 ## License & Attribution
-**Project License:** [MIT](LICENSE) — free to use, modify, and distribute.
+**Project License:** [MIT](LICENSE), free to use, modify, and distribute.
 
 **Data Attribution:** Paper metadata from [arXiv](https://arxiv.org) (per arXiv API Terms of Use), model data from the [Hugging Face Hub](https://huggingface.co), and repository data from the [GitHub REST API](https://docs.github.com/rest). Respect each source's terms and rate limits.
