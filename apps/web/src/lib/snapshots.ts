@@ -29,8 +29,14 @@ const SNAPSHOT_PATHS = new Set([
   "/intelligence/sleeping-giants",
 ]);
 
-export async function readSnapshot(path: string, params: Record<string, string>): Promise<unknown | null> {
-  if (!URL_ || !TOKEN || !SNAPSHOT_PATHS.has(path)) return null;
+/** `data` is the snapshot, or null with `status` saying why (sent back as
+ * the X-Snapshot header, so a misconfigured deploy is visible from outside). */
+export async function readSnapshot(
+  path: string,
+  params: Record<string, string>
+): Promise<{ data: unknown | null; status: string }> {
+  if (!SNAPSHOT_PATHS.has(path)) return { data: null, status: "not-snapshotted" };
+  if (!URL_ || !TOKEN) return { data: null, status: "off" };
   try {
     const res = await fetch(URL_.replace(/\/$/, ""), {
       method: "POST",
@@ -39,10 +45,10 @@ export async function readSnapshot(path: string, params: Record<string, string>)
       cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { data: null, status: `http-${res.status}` };
     const { result } = (await res.json()) as { result: string | null };
-    return result ? JSON.parse(result) : null;
-  } catch {
-    return null;
+    return result ? { data: JSON.parse(result), status: "hit" } : { data: null, status: "miss" };
+  } catch (e) {
+    return { data: null, status: e instanceof Error && e.name === "TimeoutError" ? "timeout" : "error" };
   }
 }

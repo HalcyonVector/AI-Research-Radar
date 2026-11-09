@@ -41,11 +41,15 @@ export async function proxyGet(
 
   // Public pages first try the snapshot the last ingest run published, which
   // doesn't need the (often asleep) Render instance.
+  let snapshotStatus = "skipped";
   if (cacheable) {
     const snap = await readSnapshot(upstreamPath, searchParams);
-    if (snap !== null) {
-      return NextResponse.json(snap, { headers: { ...cdnHeaders, "X-Data-Source": "snapshot" } });
+    if (snap.data !== null) {
+      return NextResponse.json(snap.data, {
+        headers: { ...cdnHeaders, "X-Data-Source": "snapshot", "X-Snapshot": snap.status },
+      });
     }
+    snapshotStatus = snap.status;
   }
 
   const result = await safeApiFetch<unknown>(upstreamPath, {
@@ -57,7 +61,10 @@ export async function proxyGet(
     return NextResponse.json(result.error, { status: result.status });
   }
   return NextResponse.json(result.data, {
-    headers: cacheable ? cdnHeaders : { "Cache-Control": "private, no-store" },
+    headers: {
+      ...(cacheable ? cdnHeaders : { "Cache-Control": "private, no-store" }),
+      "X-Snapshot": snapshotStatus,
+    },
   });
 }
 
