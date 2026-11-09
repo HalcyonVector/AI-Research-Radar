@@ -345,7 +345,7 @@ Since there is no always-on Celery worker, `ingest-cron.yml` wakes the API on a 
 ## Author
 **Sagnik**
 
-GitHub: [@halcyon-vector](https://github.com/halcyon-vector)
+GitHub: [@HalcyonVector](https://github.com/HalcyonVector)
 
 ---
 
