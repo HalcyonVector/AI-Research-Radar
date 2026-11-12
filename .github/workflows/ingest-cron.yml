@@ -202,7 +202,9 @@ jobs:
           run() {
             echo "::group::$1"
             rc=0
-            timeout "${2:-1500}" python -m src.workers.run_job "$1" '{}' || rc=$?
+            args="${3:-}"
+            [ -n "${args}" ] || args='{}'
+            timeout "${2:-1500}" python -m src.workers.run_job "$1" "${args}" || rc=$?
             echo "::endgroup::"
             if [ "${rc}" -ne 0 ]; then
               echo "::error::$1 failed (exit ${rc}; 124 = timed out)"
@@ -217,6 +219,9 @@ jobs:
           run workers.intelligence.frontier.train_and_score_frontier_predictor
           # Last, so it summarises this week's fresh Layer-3 output.
           run workers.ai.briefing.generate
+          # Keeps the database inside Supabase's 500MB free tier; FULL vacuum
+          # shrinks the reported size (brief table locks, fine at this hour).
+          run workers.maintenance.retention.run 1200 '{"full": true}'
           # Republish so the new briefing shows up without waking Render.
           run workers.snapshots.publish 600
           if [ -n "${failed}" ]; then echo "Failed:${failed}"; exit 1; fi

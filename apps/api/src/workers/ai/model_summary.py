@@ -45,6 +45,9 @@ def generate(self, model_id: str):
             m.ai_summary = summary
             m.ai_summary_generated_at = datetime.now(timezone.utc)
             m.ai_summary_model = model_name(lane="light")
+            # The card is only needed to write the summary; keeping it was
+            # ~69MB of the 500MB free database.
+            m.model_card_raw = None
             db.commit()
             return {"ok": True}
         except (json.JSONDecodeError, ValueError, LLMError,
