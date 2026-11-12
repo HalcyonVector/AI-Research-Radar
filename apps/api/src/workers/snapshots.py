@@ -10,9 +10,9 @@ REST API, falling back to Render only on a miss.
 Keys are "radar:snap:<api path>[?<sorted query>]"; apps/web/src/lib/snapshots.ts
 builds the same key from the incoming request, so the two must stay in step.
 
-Budget (Upstash free tier: 500K commands/month, 256MB): ~40 SETs per run x
-4 runs/day = ~5K commands/month, plus one GET per Vercel CDN miss. Payloads
-total about 1-2MB.
+Budget (Upstash free tier: 500K commands/month, 256MB): ~120 SETs per run
+(37 pages plus 4 per featured paper) x 4 runs/day = ~14K commands/month,
+plus one GET per Vercel CDN miss. Payloads total about 2MB.
 """
 import json
 from urllib.parse import urlencode
@@ -53,6 +53,26 @@ def _pages(db):
     for n in SLEEPING_GIANT_LIMITS:
         yield "/intelligence/sleeping-giants", {"limit": n, "offset": 0}, \
             lambda n=n: intelligence.sleeping_giants(n, 0, None, db)
+    # The paper pages people reach from the dashboard, with each panel's request.
+    from src.routers import papers
+    for pid in _featured_paper_ids(db):
+        yield f"/papers/{pid}", {}, lambda pid=pid: papers.get_paper(pid, db)
+        yield f"/papers/{pid}/related", {}, lambda pid=pid: papers.related(pid, db)
+        yield f"/papers/{pid}/metrics/history", {}, lambda pid=pid: papers.metrics_history(pid, db)
+        yield f"/intelligence/dna/{pid}", {}, lambda pid=pid: intelligence.dna(pid, db)
+
+
+def _featured_paper_ids(db) -> list[str]:
+    """Trending this month and this week, plus the Sleeping Giants list:
+    the papers the dashboard links to."""
+    from datetime import datetime, timedelta, timezone
+    from src.services import dashboard_service, paper_service
+    from src.services.intelligence import breakthrough_service
+    ids = [p["id"] for p in dashboard_service.dashboard(db)["trending_papers"]]
+    week = datetime.now(timezone.utc) - timedelta(days=7)
+    ids += [p["id"] for p in paper_service.list_papers(db, date_from=week, limit=5)["data"]]
+    ids += [g["paper"]["id"] for g in breakthrough_service.sleeping_giants(db, 10)["data"]]
+    return list(dict.fromkeys(ids))
 
 
 def _send(commands: list[list[str]]) -> None:

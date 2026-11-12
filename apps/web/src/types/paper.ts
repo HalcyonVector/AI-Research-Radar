@@ -47,9 +47,18 @@ export interface AISummary {
   related_concepts: string[];
 }
 
+export interface Implementation {
+  full_name: string;
+  url: string;
+  description?: string | null;
+  stars: number;
+  language?: string | null;
+}
+
 export interface PaperDetail extends Paper {
   ai_summary?: AISummary | null;
   org_name?: string | null;
+  implementations?: Implementation[];
 }
 
 export interface MetricsHistoryPoint {

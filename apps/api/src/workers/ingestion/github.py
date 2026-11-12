@@ -101,24 +101,68 @@ def upsert_repo(db, rd: dict) -> bool:
     db.flush()
     ids = extract_arxiv_ids((rd.get("description") or "") + " " + " ".join(rd.get("topics", [])))
     if ids:
-        p = db.execute(select(Paper).where(Paper.arxiv_id == ids[0])).scalar_one_or_none()
-        if p:
-            repo.linked_paper_id = p.id
-            repo.is_research_impl = True
-            edge = db.execute(select(KnowledgeGraphEdge).where(
-                KnowledgeGraphEdge.source_type == "repo", KnowledgeGraphEdge.source_id == repo.id,
-                KnowledgeGraphEdge.target_type == "paper", KnowledgeGraphEdge.target_id == p.id,
-                KnowledgeGraphEdge.relation == "implements")).scalar_one_or_none()
-            if not edge:
-                # only increment on a genuinely new repo->paper link - run() re-scans the
-                # same top-of-page repos every 12h, so this branch is what makes the
-                # counter idempotent instead of drifting upward on every re-scan.
-                db.add(KnowledgeGraphEdge(source_type="repo", source_id=repo.id,
-                       target_type="paper", target_id=p.id, relation="implements", source="github"))
-                p.github_impl_count = (p.github_impl_count or 0) + 1
+        _link_paper(db, repo, ids[0])
     db.commit()
     # Summaries are filled later by workers.ai.backfill, under a per-run cap.
     return True
+
+
+def _link_paper(db, repo: Repository, arxiv_id: str) -> bool:
+    """Record that `repo` implements the tracked paper `arxiv_id`, once.
+    Returns True if a new link was made."""
+    p = db.execute(select(Paper).where(Paper.arxiv_id == arxiv_id)).scalar_one_or_none()
+    if not p:
+        return False
+    repo.linked_paper_id = repo.linked_paper_id or p.id
+    repo.is_research_impl = True
+    edge = db.execute(select(KnowledgeGraphEdge).where(
+        KnowledgeGraphEdge.source_type == "repo", KnowledgeGraphEdge.source_id == repo.id,
+        KnowledgeGraphEdge.target_type == "paper", KnowledgeGraphEdge.target_id == p.id,
+        KnowledgeGraphEdge.relation == "implements")).scalar_one_or_none()
+    if edge:
+        return False
+    # only increment on a genuinely new repo->paper link - run() re-scans the
+    # same repos every run, so this is what keeps the counter from drifting up.
+    db.add(KnowledgeGraphEdge(source_type="repo", source_id=repo.id,
+           target_type="paper", target_id=p.id, relation="implements", source="github"))
+    p.github_impl_count = (p.github_impl_count or 0) + 1
+    return True
+
+
+# A README citing more papers than this is a survey or "awesome" list, not
+# an implementation of each of them.
+MAX_README_PAPERS = 3
+README_CHECKS_PER_RUN = 150  # core API: 5,000 req/hour with a token
+
+
+def link_from_readmes(db, limit: int = README_CHECKS_PER_RUN) -> int:
+    """Link repos to the papers their README cites. Repo descriptions almost
+    never carry an arXiv id, so before this no repo was linked to any paper.
+
+    Checks unlinked repos in random order (no per-repo marker, so later runs
+    cover the rest and pick up papers ingested after a repo was first seen)."""
+    linked_repo_ids = select(KnowledgeGraphEdge.source_id).where(
+        KnowledgeGraphEdge.source_type == "repo", KnowledgeGraphEdge.relation == "implements")
+    repos = db.execute(select(Repository).where(Repository.id.notin_(linked_repo_ids))
+                       .order_by(func.random()).limit(limit)).scalars().all()
+    headers = {**_headers(), "Accept": "application/vnd.github.raw"}
+    links = 0
+    for repo in repos:
+        try:
+            r = requests.get(f"https://api.github.com/repos/{repo.github_full_name}/readme",
+                             headers=headers, timeout=30)
+        except requests.RequestException:
+            continue
+        if r.status_code == 403:  # rate limited: the rest waits for the next run
+            break
+        if r.status_code != 200:
+            continue
+        ids = extract_arxiv_ids(r.text)
+        if not ids or len(ids) > MAX_README_PAPERS:
+            continue
+        links += sum(_link_paper(db, repo, i) for i in ids)
+        db.commit()
+    return links
 
 
 @celery_app.task(name="workers.ingestion.github.run", bind=True, max_retries=3)
@@ -152,7 +196,7 @@ def run(self):
                 if upsert_repo(db, rd):
                     upserted += 1
         new = (db.scalar(select(func.count(Repository.id))) or 0) - before
-        return {"upserted": upserted, "new": new}
+        return {"upserted": upserted, "new": new, "paper_links": link_from_readmes(db)}
     finally:
         db.close()
 

@@ -55,8 +55,22 @@ def paper_detail(db, p: Paper) -> dict:
         "html_url": p.html_url,
         "ai_summary": p.ai_summary,
         "org_name": _first_author_org_name(db, p),
+        "implementations": _implementations(db, p),
     })
     return d
+
+
+def _implementations(db, p: Paper) -> list[dict]:
+    """GitHub repos linked to this paper (workers.ingestion.github), most-starred first."""
+    from src.models import KnowledgeGraphEdge, Repository
+    repos = db.execute(
+        select(Repository).join(KnowledgeGraphEdge, KnowledgeGraphEdge.source_id == Repository.id)
+        .where(KnowledgeGraphEdge.source_type == "repo", KnowledgeGraphEdge.relation == "implements",
+               KnowledgeGraphEdge.target_type == "paper", KnowledgeGraphEdge.target_id == p.id)
+        .order_by(Repository.stars.desc()).limit(10)
+    ).scalars().all()
+    return [{"full_name": r.github_full_name, "url": r.url, "description": r.description,
+             "stars": r.stars, "language": r.primary_language} for r in repos]
 
 
 def model_item(m) -> dict:

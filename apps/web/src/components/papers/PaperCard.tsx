@@ -44,7 +44,9 @@ export function PaperCard({ paper, variant = "default", index }: PaperCardProps)
               <div className="mb-1 flex items-center gap-2">
                 <CategoryBadge slug={cat?.slug} name={cat?.name} color={cat?.color} withIcon={false} />
                 {paper.has_ai_summary && (
-                  <Sparkles size={12} className="text-[var(--accent-hover)]" />
+                  <span title="AI summary available" aria-label="AI summary available" className="inline-flex">
+                    <Sparkles size={12} className="text-[var(--accent-hover)]" />
+                  </span>
                 )}
               </div>
               <p className="line-clamp-2 text-sm font-medium leading-snug text-[var(--text-primary)]">

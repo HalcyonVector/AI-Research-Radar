@@ -10,6 +10,7 @@ import { PaperChat } from "@/components/papers/PaperChat";
 import { AISummaryPanel } from "@/components/papers/AISummaryPanel";
 import { PaperMetrics, PaperMetricsSkeleton } from "@/components/papers/PaperMetrics";
 import { RelatedPapers } from "@/components/papers/RelatedPapers";
+import { PaperCode } from "@/components/papers/PaperCode";
 import { ResearchDNAChart } from "@/components/intelligence/ResearchDNAChart";
 import { ErrorState } from "@/components/layout/ErrorState";
 
@@ -45,7 +46,16 @@ export default function PaperDetailPage() {
                 <RelatedPapers paperId={id} />
               </>
             }
-            aside={paper ? <PaperMetrics paper={paper} paperId={id} /> : <PaperMetricsSkeleton />}
+            aside={
+              paper ? (
+                <div className="space-y-6">
+                  <PaperMetrics paper={paper} paperId={id} />
+                  <PaperCode repos={paper.implementations} />
+                </div>
+              ) : (
+                <PaperMetricsSkeleton />
+              )
+            }
           />
         </>
       )}

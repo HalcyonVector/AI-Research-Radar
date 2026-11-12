@@ -34,11 +34,20 @@ const SNAPSHOT_PATHS = new Set([
 
 /** `data` is the snapshot, or null with `status` saying why (sent back as
  * the X-Snapshot header, so a misconfigured deploy is visible from outside). */
+// Per-paper pages for the papers the dashboard links to.
+const SNAPSHOT_PATTERNS = [
+  /^\/papers\/[0-9a-f-]{36}(\/related|\/metrics\/history)?$/,
+  /^\/intelligence\/dna\/[0-9a-f-]{36}$/,
+];
+
+const isSnapshotted = (path: string) =>
+  SNAPSHOT_PATHS.has(path) || SNAPSHOT_PATTERNS.some((re) => re.test(path));
+
 export async function readSnapshot(
   path: string,
   params: Record<string, string>
 ): Promise<{ data: unknown | null; status: string }> {
-  if (!SNAPSHOT_PATHS.has(path)) return { data: null, status: "not-snapshotted" };
+  if (!isSnapshotted(path)) return { data: null, status: "not-snapshotted" };
   if (!URL_ || !TOKEN) return { data: null, status: "off" };
   // The REST endpoint, not the rediss:// connection string.
   if (!URL_.startsWith("https://")) return { data: null, status: "bad-url" };
