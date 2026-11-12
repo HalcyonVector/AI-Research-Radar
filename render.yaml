@@ -36,6 +36,13 @@ services:
     dockerfilePath: infra/docker/Dockerfile.api
     healthCheckPath: /health
     autoDeploy: true
+    # Only rebuild when the API itself changes. Without this every push to main
+    # (README, web-only changes) rebuilt the Docker image, spending build
+    # minutes from the monthly pool all free services in the workspace share.
+    buildFilter:
+      paths:
+        - apps/api/**
+        - infra/docker/Dockerfile.api
     envVars:
       - key: ENVIRONMENT
         value: production
