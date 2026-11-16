@@ -25,6 +25,7 @@ MIN_DOWNLOADS = 100
 MIN_LIKES = 5
 STALE_AFTER = "30 days"
 DAILY_WINDOW = "35 days"
+DELETE_BATCH = 1000
 
 _CLEAR_CARDS = "UPDATE models SET model_card_raw = NULL WHERE ai_summary IS NOT NULL AND model_card_raw IS NOT NULL"
 
@@ -82,10 +83,15 @@ def run(dry_run: bool = False, full: bool = False):
 
         cards = db.execute(text(_CLEAR_CARDS)).rowcount
         db.commit()
-        dead = f"SELECT id FROM ({_DEAD_MODELS}) d"
-        db.execute(text(f"DELETE FROM model_download_history WHERE model_id IN ({dead})"))
-        models = db.execute(text(f"DELETE FROM models WHERE id IN ({dead})")).rowcount
-        db.commit()
+        # In committed batches, so no single statement nears Supabase's
+        # 2-minute statement timeout however many models have gone stale.
+        dead = [r[0] for r in db.execute(text(_DEAD_MODELS))]
+        models = 0
+        for i in range(0, len(dead), DELETE_BATCH):
+            ids = {"ids": dead[i:i + DELETE_BATCH]}
+            db.execute(text("DELETE FROM model_download_history WHERE model_id = ANY(:ids)"), ids)
+            models += db.execute(text("DELETE FROM models WHERE id = ANY(:ids)"), ids).rowcount
+            db.commit()
         model_hist = db.execute(text(_thin("model_download_history", "model_id"))).rowcount
         paper_hist = db.execute(text(_thin("paper_metrics_history", "paper_id"))).rowcount
         db.commit()
