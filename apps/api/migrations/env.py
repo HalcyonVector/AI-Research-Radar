@@ -4,6 +4,7 @@ from alembic import context
 
 from src.config import settings
 from src.database import Base
+from src.db_security import enable_rls
 import src.models  # noqa: F401 — register all tables
 
 config = context.config
@@ -31,6 +32,9 @@ def run_migrations_online() -> None:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
+            # Cover tables added by any migration, not only those that existed
+            # when 0009 ran (see src/db_security.py).
+            enable_rls(connection)
 
 
 if context.is_offline_mode():
