@@ -2,12 +2,14 @@
 
 import { AlertTriangle } from "lucide-react";
 import { formatDateShort, relativeTime } from "@/lib/formatters";
+import { nextArxivAnnouncement } from "@/lib/arxiv-schedule";
 
 export interface Freshness {
   papers_ingested_at: string | null;
   newest_paper_published_at: string | null;
   models_updated_at: string | null;
   repos_updated_at: string | null;
+  generated_at?: string | null;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -27,6 +29,11 @@ export function FreshnessStatus({ freshness }: { freshness?: Freshness }) {
   const modelsStale = olderThan(freshness.models_updated_at, SOURCES_STALE_MS);
   const reposStale = olderThan(freshness.repos_updated_at, SOURCES_STALE_MS);
   const stale = papersStale || modelsStale || reposStale;
+  const next = nextArxivAnnouncement().toLocaleString(undefined, {
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <div
@@ -34,14 +41,15 @@ export function FreshnessStatus({ freshness }: { freshness?: Freshness }) {
       title={
         stale
           ? "A data source hasn't updated on schedule; the ingest job may be failing."
-          : "Data refreshes every 6 hours."
+          : "Data refreshes every 6 to 9 hours. arXiv publishes Sunday to Thursday at 20:00 US Eastern, so there are no new papers on Friday or Saturday nights."
       }
     >
       {stale && <AlertTriangle size={14} className="mt-px shrink-0 text-[var(--text-primary)]" />}
       <div className="leading-relaxed">
+        {freshness.generated_at && <p>Updated {relativeTime(freshness.generated_at)}</p>}
         <p className={papersStale ? "font-medium text-[var(--text-primary)]" : undefined}>
           Newest paper {formatDateShort(freshness.newest_paper_published_at)}
-          {papersStale && " · arXiv feed delayed"}
+          {papersStale ? " · arXiv feed delayed" : ` · next batch ${next}`}
         </p>
         <p>
           <span className={modelsStale ? "font-medium text-[var(--text-primary)]" : undefined}>

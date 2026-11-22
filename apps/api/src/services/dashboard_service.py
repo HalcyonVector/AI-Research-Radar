@@ -91,6 +91,9 @@ def dashboard(db: Session) -> dict:
         "newest_paper_published_at": _iso(newest_paper),
         "models_updated_at": _iso(db.scalar(select(func.max(Model.updated_at)))),
         "repos_updated_at": _iso(db.scalar(select(func.max(Repository.updated_at)))),
+        # When this payload was built: the last ingest run for a snapshot, or
+        # the cache fill for a live response.
+        "generated_at": _iso(datetime.now(timezone.utc)),
     }
 
     return {

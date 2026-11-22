@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/providers/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
@@ -7,15 +7,18 @@ import { ToastProvider } from "@/components/providers/ToastProvider";
 import { CommandPaletteProvider } from "@/components/providers/CommandPaletteProvider";
 import { AppShell } from "@/components/layout/AppShell";
 
-const grotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+// Bundled (OFL, latin subset, variable weight) rather than next/font/google,
+// so builds don't fail when the Google Fonts download hiccups.
+const grotesk = localFont({
+  src: "./fonts/SpaceGrotesk-Variable.woff2",
+  weight: "300 700",
   variable: "--font-grotesk",
   display: "swap",
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
+const jetbrains = localFont({
+  src: "./fonts/JetBrainsMono-Variable.woff2",
+  weight: "100 800",
   variable: "--font-jetbrains",
   display: "swap",
 });

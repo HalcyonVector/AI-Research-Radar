@@ -96,7 +96,7 @@ jobs:
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN || github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check required secrets
         run: |
@@ -104,7 +104,7 @@ jobs:
           [ -n "${OPENAI_API_KEY}" ] || echo "::warning::OPENAI_API_KEY (Groq) not set - summaries will be skipped"
           [ -n "${GEMINI_API_KEY}" ] || echo "::warning::GEMINI_API_KEY not set - embeddings will be skipped"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -178,14 +178,14 @@ jobs:
       UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check required secrets
         run: |
           [ -n "${DATABASE_URL}" ] || { echo "::error::DATABASE_URL secret is not set"; exit 1; }
           [ -n "${OPENAI_API_KEY}" ] || echo "::warning::OPENAI_API_KEY (Groq) not set - the briefing will fail"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
