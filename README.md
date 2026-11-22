@@ -1,10 +1,10 @@
 # AI Research Radar: What's Happening in AI Research, and Why
 
-A continuously updated intelligence layer over AI research. It pulls in new arXiv papers, Hugging Face models and GitHub repositories several times a day, scores and summarizes them, links them into a knowledge graph, and then reasons over that graph: which areas are accelerating, which overlooked papers show the early signs of mattering, which ideas are leaking from one field into another, and which labs and researchers are moving. Every Monday it writes a briefing of the week.
+Which parts of AI research are growing, which new papers are starting to matter, and does code follow the papers? AI Research Radar answers those questions from public data. Several times a day it collects new arXiv papers in 15 AI research areas and joins them to their citations (Semantic Scholar), their authors' institutions (OpenAlex), the Hugging Face models and GitHub repositories that implement them, and the discussion they get on Hacker News and Reddit. Each paper is classified into an area, scored for impact, momentum and novelty, and kept as a dated history, so trends are measured as each area's share of all papers per week rather than raw counts that swing with ingestion. The web app is how the analysis is explored: area trends, papers ranked by signal, the links between papers, models and code, and a weekly written briefing.
 
-Built with Next.js, FastAPI, PostgreSQL with pgvector, Redis and LLM summaries (Groq), on public data from arXiv, Hugging Face, GitHub, Semantic Scholar, OpenAlex, Hacker News and Reddit.
+Built with Python (FastAPI, SQLAlchemy, scikit-learn, NetworkX), PostgreSQL with pgvector, LLM summaries (Groq) and a Next.js front end, on public data from arXiv, Semantic Scholar, OpenAlex, Hugging Face, GitHub, Hacker News and Reddit.
 
-> **What it's for:** a single place to follow AI research as it happens, and to understand a paper, a trend or a lab in context instead of as one more link in a feed.
+> **What it's for:** following AI research as it happens, and judging a paper, an area or a lab in context (how fast it is growing, who builds on it, whether code exists) instead of as one more link in a feed.
 
 **Live demo:** [ai-research-radar.vercel.app](https://ai-research-radar.vercel.app) (API docs at [ai-research-radar-api-xdkz.onrender.com/docs](https://ai-research-radar-api-xdkz.onrender.com/docs))
 
@@ -20,18 +20,13 @@ Built with Next.js, FastAPI, PostgreSQL with pgvector, Redis and LLM summaries (
 
 ## Findings
 
-Real problems found while running this, and what changed:
+From the database on 23 November 2026: 9,645 papers published from 14 June to 19 November 2026, with 72,413 daily metric snapshots. All figures come from read-only SQL against the production database.
 
-- **arXiv ingestion silently returned nothing.** `feedparser.parse(url)` swallows HTTP errors and hands back an empty feed, so a throttled or failing request looked exactly like "no new papers". The fetch now goes through `requests` with a timeout and status check, retries with backoff, and the job fails loudly when every category fails or the newest paper is more than five days old.
-- **Embedding batches hit the quota after two runs a day.** Gemini counts every text inside a batch against its daily cap, not each request. The per-run cap was cut to fit four runs a day.
-- **Every trend sat at +100 growth.** Growth compared raw paper counts week over week, so a week where ingestion recovered from an outage looked like explosive growth in every category. It now scores each category's share of all papers that week.
-- **The Semantic Scholar job inserted nothing, run after run.** One request per paper against the shared unauthenticated pool was rate-limited almost every time, and the failures were skipped silently. It now uses the batch endpoint (500 papers per request), stores real global citation counts instead of counting only citations between papers already in the database, and uses an API key when one is set.
-- **Rate-limited LLM calls crawled instead of failing.** Each call retried six times with up to a minute between tries, so when Groq's quota ran low a summary took about five minutes and the job ran into its 25-minute timeout with no log output. Calls now give up after two minutes of back-off, batch jobs stop at the first long rate limit, and job warnings reach the CI log.
-- **The repo corpus stopped growing.** GitHub search results were sorted by all-time stars, so every run got the same famous repositories back. It now also asks for repositories created in the last 30 days.
-- **No repository was ever linked to a paper.** Links came only from a repo's one-line description, which almost never contains an arXiv id. The ingest now reads READMEs and links a repo to the tracked papers it cites, skipping READMEs that cite more than three papers (surveys and "awesome" lists).
-- **The first visit after a quiet spell took 30 to 60 seconds.** The API host sleeps after 15 idle minutes and keeping it awake would use the hosting quota other projects need. Each ingest run now publishes the read-only pages (dashboard, trends, briefings, the papers the dashboard links to) to Redis, and the web app serves them from there without waking the API.
-- **The database was on course to outgrow its storage in about three months.** Half of the models table was raw model-card text that is only read once, to write the model's summary. A weekly retention job clears it, removes low-signal models nothing points at, and thins history older than five weeks to one point per week.
-- **"Since your last visit" asked a different question for every visitor,** so it could never be cached and always woke the API. Those answers are now pre-built for every gap from 1 to 30 days.
+- **Five areas make up 85% of new AI papers.** In the two weeks after ingestion was repaired (2 to 15 November, 4,216 papers, about 2,100 a week), Reinforcement Learning had 19.5% of papers, Computer Vision 18.1%, Reasoning Models 17.1%, LLMs 15.5% and Robotics 14.3%. Everything agent-related (AI Agents, Multi-Agent Systems, Coding Agents and MCP) adds up to 7.3%, and RAG to 2.9%.
+- **A broken feed doesn't just shrink the data, it skews it.** From 14 September to 25 October the arXiv fetch was failing silently and caught only about 210 papers a week. In that sample Reasoning Models were 32.5% of papers and Robotics 5.5%; once the full feed was restored they were 17.1% and 14.3%. Comparing October with November naively would report Robotics nearly tripling, when what changed was coverage. Trend growth is computed on each area's share of the week's papers, which removes swings in volume but not a biased sample like this one, so the job now fails loudly and the dashboard flags a stalled feed instead.
+- **Citations arrive late and unevenly.** Only 7% of papers under 40 days old have been cited at all, rising to 32% at 40 to 80 days and 48% at 120 to 160 days. Among papers at least 60 days old the median is 0 citations and the 90th percentile is 4. The 1% most-cited papers hold 27.5% of all citations and the top 10% hold 58.6%, so an average citation count says little about a typical paper.
+- **The October scores did not predict November citations.** For 1,289 papers published before 1 October, the impact score recorded on 22 October had a rank correlation of 0.04 with the global citation count on 23 November; even the October citation count managed only 0.10, because October counted citations between tracked papers only, and real Semantic Scholar counts replaced them in mid-November. The momentum score was non-zero for 1 of 2,004 papers that day (119 of 9,645 today). The scores are a ranking aid, not a forecast, until there are a few months of consistent history to test them on.
+- **Code links are still too sparse to measure.** Only 54 papers (0.6%) are linked to a GitHub repository (25) or a Hugging Face model (30), and the linked repositories and models carry no creation date, so the paper-to-code delay can't be measured yet. The 17 linked papers older than 30 days were cited more often (82% have a citation, against 37% of the rest), but 17 is too few to draw a conclusion.
 
 ---
 
@@ -39,7 +34,7 @@ Real problems found while running this, and what changed:
 
 ### Dashboard
 - Trending papers for the week, month or all time, emerging areas with this week's paper counts, a weekly briefing preview, breakout and newly added models, new repositories, an activity heatmap and Sleeping Giants.
-- A "since your last visit" bar and a data-freshness indicator that flags when a source stops updating.
+- A "since your last visit" bar and a data-freshness line: when the data was built, the newest paper, when arXiv publishes next, and a flag when a source stops updating.
 
 ### Papers
 - Search by keyword with category, date, sort and "has AI summary" filters; save any search as a watch.
@@ -205,6 +200,17 @@ Upstash Redis (snapshots, cache)            │
 
 Jobs run in their own process on the Actions runner (`src/workers/run_job.py`), so the API never carries their memory. Every response from a snapshotted path carries an `X-Snapshot` header (`hit`, `miss`, `off`, `http-<status>`) so a misconfiguration is visible from outside.
 
+### Problems found while running it
+
+- **arXiv ingestion silently returned nothing.** `feedparser.parse(url)` swallows HTTP errors and returns an empty feed, so a throttled request looked like "no new papers" (the cause of the skewed sample in Findings). The fetch now checks status, retries with backoff, and fails the job when every category fails or the newest paper is more than five days old.
+- **Every trend sat at +100 growth.** Growth compared raw weekly counts, so a week where ingestion recovered looked like explosive growth everywhere. It now scores each area's share of the week's papers.
+- **Citation counts only covered papers already in the database.** The Semantic Scholar job was rate-limited almost every time and skipped failures silently. It now uses the batch endpoint (500 papers per request) with an API key and stores global citation counts.
+- **No repository was ever linked to a paper.** Links came only from a repo's one-line description. The ingest now reads READMEs and links a repo to the tracked papers it cites, skipping READMEs that cite more than three (surveys and lists), and also searches for repositories created in the last 30 days.
+- **Rate-limited LLM calls crawled instead of failing.** Calls now give up after two minutes of back-off and batch jobs stop at the first long rate limit; Gemini embeddings are capped per run because the daily quota counts every text in a batch.
+- **The first visit after a quiet spell took 30 to 60 seconds** while the sleeping API host woke up. Each ingest run now publishes the read-only pages, including "since your last visit" for every gap from 1 to 30 days, to Redis, and the web app serves them without waking the API.
+- **The database was on course to outgrow its storage in about three months.** A weekly retention job clears raw model cards once summarized, removes low-signal models nothing points at, and thins history older than five weeks to weekly points. Its first run hit the 2-minute statement timeout because no foreign key pointing at `models` was indexed; with the indexes it took the database from 314MB to 175MB in 34 seconds.
+- **The web build depended on Google Fonts** and failed when the download did; the fonts now ship with the app.
+
 ---
 
 ## Testing
@@ -216,14 +222,16 @@ pytest tests/unit -q
 
 **29 unit tests (pytest)** cover scoring formulas and growth on category share, cursor pagination, arXiv id extraction, the job lock, LLM retry behaviour (a long `Retry-After` gives up without waiting, short waits are honoured, total back-off is capped) and snapshot key construction, which must match the web app's. CI also runs Ruff and a production build of the web app on every push.
 
-Ingestion, scoring and the intelligence jobs are validated against live data: each change in Findings was checked with a read-only dry run against the production database before it shipped, and every scheduled run reports per-job results and warnings in the Actions log.
+Ingestion, scoring and the intelligence jobs are validated against live data: each fix under Architecture was checked with a read-only dry run against the production database before it shipped, and every scheduled run reports per-job results and warnings in the Actions log.
 
 ---
 
 ## Honest Limitations
 
 - **The corpus starts in mid-2026,** so citation counts, impact scores and anything built on history (genealogy, growth, the frontier predictor) are thin. Papers cited only by older work look less important than they are.
-- **No new papers from Friday to Monday.** arXiv announces on weekday evenings US time, so the newest paper date stays put over the weekend.
+- **No new papers on Friday and Saturday nights.** arXiv announces Sunday to Thursday at 20:00 US Eastern, so the newest paper date stays put over the weekend; the dashboard shows when the next batch is due.
+- **The data has gaps.** Nothing was ingested for August 2026 and only a partial, skewed sample from mid-September to late October (see Findings), so area trends before 2 November should be read with care.
+- **The scores are not validated yet.** October's impact and momentum scores showed no relationship with November's citations, partly because the citation source changed in between. They rank papers within the app; they don't predict impact.
 - **About a quarter of papers have an AI summary.** Groq's daily quota allows roughly 60 paper summaries a day against several hundred new papers, so the highest-scoring papers are summarized first; any other paper can be summarized on demand from its page.
 - **Interactive features can be slow on a first request.** Search, paper chat, watches and pages that aren't snapshotted go to the API host, which sleeps after 15 idle minutes and takes 30 to 60 seconds to wake.
 - **Scheduled runs are late.** GitHub delays scheduled workflows, so the 6-hour cadence is closer to every 8 or 9 hours.
@@ -239,8 +247,8 @@ Ingestion, scoring and the intelligence jobs are validated against live data: ea
 - **Papers with Code style benchmarks:** track reported results per task, from real leaderboard data.
 - **Snapshots for more pages,** such as model pages and category pages, ranked by traffic.
 - **A trained category classifier** using the embeddings already stored, to fix boundary cases.
-- **Export** of briefings and paper lists to CSV or PDF.
-- **An HNSW vector index** once the corpus is large enough for IVFFlat recall to matter.
+- **A score backtest page** that re-runs the October-to-November check in Findings every month, once the citation source has been stable for a few months.
+- **Paper-to-code delay,** once repository and model creation dates are stored with each link.
 
 ---
 
