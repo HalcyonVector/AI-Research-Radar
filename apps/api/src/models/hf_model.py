@@ -22,7 +22,7 @@ class Model(Base):
     hf_org_name: Mapped[str | None] = mapped_column(Text)
     linked_paper_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("papers.id"))
     github_repo_url: Mapped[str | None] = mapped_column(Text)
-    model_card_raw: Mapped[str | None] = mapped_column(Text)
+    model_card_raw: Mapped[str | None] = mapped_column(Text, deferred=True)  # read only by model_summary
     license: Mapped[str | None] = mapped_column(String(100))
     languages = mapped_column(ARRAY(Text))
     tags = mapped_column(ARRAY(Text))

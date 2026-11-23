@@ -23,7 +23,7 @@ class Repository(Base):
     primary_language: Mapped[str | None] = mapped_column(String(50))
     topics = mapped_column(ARRAY(Text))
     is_research_impl: Mapped[bool] = mapped_column(Boolean, default=False)
-    readme_raw: Mapped[str | None] = mapped_column(Text)
+    readme_raw: Mapped[str | None] = mapped_column(Text, deferred=True)  # read only by repo_summary
     ai_summary = mapped_column(JSONB, nullable=True)
     ai_summary_generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ai_summary_model: Mapped[str | None] = mapped_column(String(50))

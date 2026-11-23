@@ -83,7 +83,9 @@ def related_papers(db: Session, paper_id: str, limit=8) -> list[dict]:
     p = db.get(Paper, paper_id)
     if not p:
         return []
-    if p.abstract_embedding is not None:
+    # Ask Postgres rather than reading the (deferred, 4.7KB) embedding itself.
+    has_embedding = db.execute(select(Paper.abstract_embedding.isnot(None)).where(Paper.id == p.id)).scalar()
+    if has_embedding:
         stmt = text(
             "SELECT id FROM papers WHERE id <> :pid AND abstract_embedding IS NOT NULL "
             "ORDER BY abstract_embedding <=> (SELECT abstract_embedding FROM papers WHERE id=:pid) "

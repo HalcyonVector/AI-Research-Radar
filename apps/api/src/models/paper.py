@@ -16,7 +16,10 @@ class Paper(Base):
     arxiv_id: Mapped[str | None] = mapped_column(String(20), unique=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     abstract: Mapped[str] = mapped_column(Text, nullable=False)
-    abstract_embedding = mapped_column(Vector(settings.embedding_dim), nullable=True)
+    # Deferred: about 4.7KB per row on the wire, and only similarity search and
+    # novelty scoring use it, both in SQL. Loaded with every paper, it was most
+    # of the database's egress and ran past Supabase's free quota.
+    abstract_embedding = mapped_column(Vector(settings.embedding_dim), nullable=True, deferred=True)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at_source: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     source: Mapped[str] = mapped_column(String(20), default="arxiv")

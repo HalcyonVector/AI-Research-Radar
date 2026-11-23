@@ -16,8 +16,9 @@ def generate(self, paper_id: str):
     and return instead of calling self.retry()."""
     db = session_scope()
     try:
-        paper = db.get(Paper, paper_id)
-        if not paper or paper.abstract_embedding is not None:
+        paper = db.execute(select(Paper).where(Paper.id == paper_id,
+                                               Paper.abstract_embedding.is_(None))).scalar_one_or_none()
+        if not paper:
             return {"skipped": True}
         try:
             vec = embed_texts([f"{paper.title}\n\n{paper.abstract}"])[0]
@@ -36,8 +37,8 @@ def generate(self, paper_id: str):
 def generate_batch(paper_ids: list[str]):
     db = session_scope()
     try:
-        papers = db.execute(select(Paper).where(Paper.id.in_(paper_ids))).scalars().all()
-        todo = [p for p in papers if p.abstract_embedding is None]
+        todo = db.execute(select(Paper).where(Paper.id.in_(paper_ids),
+                                              Paper.abstract_embedding.is_(None))).scalars().all()
         if not todo:
             return {"skipped": True}
         vecs = embed_texts([f"{p.title}\n\n{p.abstract}" for p in todo])
